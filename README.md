@@ -1,0 +1,2 @@
+# ygoProInJava
+通过JNA调用ygocore，在java中运行ygopro的基本功能
