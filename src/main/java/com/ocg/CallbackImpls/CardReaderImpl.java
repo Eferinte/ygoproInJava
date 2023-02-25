@@ -9,7 +9,7 @@ import com.sun.jna.Pointer;
 public class CardReaderImpl implements OCGDll.card_reader {
     @Override
     public int invoke(int code, card_data.ByReference pdata) {
-        if (!DataManager.GetData(code, pdata)) {
+        if (!DataManager.GetDataForCore(code, pdata)) {
             pdata.code = 0;
             pdata.alias = 0;
             pdata.setcode = 0;

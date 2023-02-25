@@ -27,7 +27,7 @@ public class SingleDuel extends DuelMode {
         }
     }
     public void StartDuel(DuelPlayer dp){
-        hand_result[0] = 0; // 先后手
+        hand_result[0] = 0;
         hand_result[1] = 0;
         players[0].state = 3; // CTOS_HAND_RESULT
         players[1].state = 3; // CTOS_HAND_RESULT
@@ -75,9 +75,7 @@ public class SingleDuel extends DuelMode {
         Process();
     }
 
-    /**
-     * 线程循环
-     */
+
     void Process(){
         byte[] engineBuffer = new byte[0x1000];
         int engFlag = 0, engLen = 0;

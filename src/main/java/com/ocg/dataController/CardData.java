@@ -2,6 +2,8 @@ package com.ocg.dataController;
 
 import com.sun.jna.Structure;
 
+import static com.ocg.Constants.TYPE_LINK;
+
 public class CardData {
     public int code;
     public int alias;
@@ -16,7 +18,7 @@ public class CardData {
     public int rscale;
     public int link_marker;
 
-    public CardData(int code, int alias, long setcode, int type, int level, int attribute, int race, int attack, int defense, int lscale, int rscale, int link_marker) {
+    public CardData(int code, int alias, long setcode, int type, int level, int attribute, int race, int attack, int defense) {
         this.code = code;
         this.alias = alias;
         this.setcode = setcode;
@@ -26,8 +28,11 @@ public class CardData {
         this.race = race;
         this.attack = attack;
         this.defense = defense;
-        this.lscale = lscale;
-        this.rscale = rscale;
-        this.link_marker = link_marker;
+        this.lscale = (level >> 24) & 0xff;
+        this.rscale = (level >> 16) & 0xff;
+        if ((type & TYPE_LINK) > 0) {
+            this.link_marker = this.defense;
+            this.defense = 0;
+        } else this.link_marker = 0;
     }
 }

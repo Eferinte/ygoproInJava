@@ -33,7 +33,7 @@ public interface Constants {
     public static final int LOCATION_FZONE = 0x100;
     public static final int LOCATION_PZONE = 0x200;
 
-    // Positions 卡片放置状态
+    // Positions
 
     public static final byte POS_FACEUP_ATTACK = 0x1;
     public static final byte POS_FACEDOWN_ATTACK = 0x2;
@@ -43,5 +43,33 @@ public interface Constants {
     public static final byte POS_FACEDOWN = 0xa;
     public static final byte POS_ATTACK = 0x3;
     public static final byte POS_DEFENSE = 0xc;
+
+    //Types
+    public static final byte TYPE_MONSTER = 0x1;        //
+    public static final byte TYPE_SPELL = 0x2;       //
+    public static final byte TYPE_TRAP = 0x4;    //
+    public static final byte TYPE_NORMAL = 0x10;    //
+    public static final byte TYPE_EFFECT = 0x20;    //
+    public static final byte TYPE_FUSION = 0x40;
+    ;    //
+    public static final int TYPE_RITUAL = 0x80;    //
+    public static final int TYPE_TRAPMONSTER = 0x100;//
+    public static final int TYPE_SPIRIT = 0x200;        //
+    public static final int TYPE_UNION = 0x400;    //
+    public static final int TYPE_DUAL = 0x800;    //
+    public static final int TYPE_TUNER = 0x1000;//
+    public static final int TYPE_SYNCHRO = 0x2000;    //
+    public static final int TYPE_TOKEN = 0x4000;    //
+    public static final int TYPE_QUICKPLAY = 0x10000;    //
+    public static final int TYPE_CONTINUOUS = 0x20000;    //
+    public static final int TYPE_EQUIP = 0x40000;    //
+    public static final int TYPE_FIELD = 0x80000;    //
+    public static final int TYPE_COUNTER = 0x100000;    //
+    public static final int TYPE_FLIP = 0x200000;//
+    public static final int TYPE_TOON = 0x400000;//
+    public static final int TYPE_XYZ = 0x800000;    //
+    public static final int TYPE_PENDULUM = 0x1000000;    //
+    public static final int TYPE_SPSUMMON = 0x2000000;    //
+    public static final int TYPE_LINK = 0x4000000;    //
 
 }

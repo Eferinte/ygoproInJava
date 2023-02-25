@@ -10,16 +10,12 @@ import com.sun.jna.ptr.IntByReference;
 
 public interface OCGDll extends Library {
 
-    /**
-     * 将Dll实例化
-     */
+
     String OCG_DLL_PATH = "D:\\vs2022_projs\\ocgcore\\x64\\Release\\ocgcore";
     OCGDll INSTANCE = Native.load(OCG_DLL_PATH, OCGDll.class);
 
 
-    /**
-     * 函数指针声明
-     */
+
     interface message_handler extends Callback {
         int invoke(Pointer pointer, int signal);
     }
@@ -32,9 +28,6 @@ public interface OCGDll extends Library {
         int invoke(int i, card_data.ByReference _i);
     }
 
-    /**
-     * 三个接口函数声明
-     */
 
     void set_script_reader(script_reader f);
 
@@ -42,10 +35,7 @@ public interface OCGDll extends Library {
 
     void set_message_handler(message_handler f);
 
-    /**
-     * 其他函数声明
-     */
-    int jna_test_multi(int a, int b); // 测试JNA是否正常运作的函数;
+    int jna_test_multi(int a, int b);
 
     long create_duel(int seed);
 
