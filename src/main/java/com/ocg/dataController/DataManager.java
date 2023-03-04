@@ -12,7 +12,7 @@ import java.util.Map;
 public class DataManager {
     public static String UNKNOW_STRING = "???";
     public static Map<Integer, CardDataC> _datas = new HashMap<Integer, CardDataC>();
-    public static Map<Integer, CardString> _strings;
+    public static Map<Integer, CardString> _strings = new HashMap<Integer, CardString>();
 
     static String DataBasePath = "D:/MyCardLibrary/ygopro/cards.cdb";
 
@@ -28,6 +28,17 @@ public class DataManager {
                 _datas.put(rs.getInt(1),card);
             }
             System.out.println("data load complete");
+
+            rs = stmt.executeQuery("select * from texts");
+            while (rs.next()) {
+                String[] desc = new String[16];
+                for(int i=0;i<16;i++){
+                    desc[i] = rs.getString(i+4);
+                }
+                CardString str = new CardString(rs.getString(2),rs.getString(3),desc);
+                _strings.put(rs.getInt(1),str);
+            }
+            System.out.println("text load complete");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -42,7 +53,12 @@ public class DataManager {
         }
     }
 
-
+    /**
+     * 为ygo-core提供的方法
+     * @param code
+     * @param pdata
+     * @return
+     */
     public static boolean GetDataForCore(int code, card_data.ByReference pdata) {
         if (!_datas.containsKey(code)) return false;
         CardDataC target = _datas.get(code);
@@ -59,5 +75,27 @@ public class DataManager {
         pdata.rscale = target.rscale;
         pdata.link_marker = target.link_marker;
         return true;
+    }
+
+    /**
+     * 获取具体数据
+     * @param code
+     * @return
+     */
+    public static CardDataC GetData(int code) {
+        if(_datas.size() == 0) return null;
+        if (!_datas.containsKey(code)) return null;
+        return _datas.get(code);
+    }
+
+    /**
+     * 获取描述
+     * @param code
+     * @return
+     */
+    public static CardString GetDesc(int code) {
+        if(_strings.size() == 0) return null;
+        if (!_strings.containsKey(code)) return null;
+        return _strings.get(code);
     }
 }

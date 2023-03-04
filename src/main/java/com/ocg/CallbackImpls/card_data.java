@@ -1,7 +1,7 @@
 package com.ocg.CallbackImpls;
 
 import com.sun.jna.Structure;
-@Structure.FieldOrder({"code","alias","setcode","type","level","attribute","race","attack","defense","lscale","rscale","link_marker","clear"})
+@Structure.FieldOrder({"code","alias","setcode","type","level","attribute","race","attack","defense","lscale","rscale","link_marker"})
 public class card_data extends Structure {
     public int code;
     public int alias;

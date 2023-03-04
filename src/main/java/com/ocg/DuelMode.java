@@ -5,6 +5,6 @@ public class DuelMode {
     public long pduel;
     public HostInfo host_info;
     public DuelMode(){
-
+        host_info = new HostInfo();
     }
 }

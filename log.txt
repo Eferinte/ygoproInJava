@@ -1,0 +1,11 @@
+Ö´ÐÐÓÚSun Mar  5 04:11:04 2023
+
+create_duel
+set_player_info
+set_player_info
+read code :73628505
+new card 
+[read_card]:code=73628505
+[register_card]:line3
+[call_card_function]:1
+[call_card_function]:2
