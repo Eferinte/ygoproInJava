@@ -5,7 +5,7 @@ public class CardDataC extends CardData {
     public int category;
 
 
-    public CardDataC(int code, int alias, long setcode, int type, int level, int attribute, int race, int attack, int defense, int ot, int category) {
+    public CardDataC(int code, int ot, int alias, long setcode, int type, int attack, int defense, int level, int race, int attribute, int category) {
 
         super(code, alias, setcode, type, level, attribute, race, attack, defense);
         this.ot = ot;

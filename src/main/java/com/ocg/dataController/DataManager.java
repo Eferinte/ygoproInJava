@@ -24,7 +24,7 @@ public class DataManager {
             Statement stmt = conn.createStatement();
             ResultSet rs = stmt.executeQuery("select * from datas;");
             while (rs.next()) {
-                CardDataC card = new CardDataC(rs.getInt(1), rs.getInt(2), rs.getLong(3), rs.getInt(4), rs.getInt(5), rs.getInt(6), rs.getInt(7), rs.getInt(8), rs.getInt(9), rs.getInt(10), rs.getInt(11));
+                CardDataC card = new CardDataC(rs.getInt(1), rs.getInt(2), rs.getInt(3), rs.getLong(4), rs.getInt(5), rs.getInt(6), rs.getInt(7), rs.getInt(8), rs.getInt(9), rs.getInt(10), rs.getInt(11));
                 _datas.put(rs.getInt(1),card);
             }
             System.out.println("data load complete");
