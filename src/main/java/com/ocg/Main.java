@@ -16,6 +16,10 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.Enumeration;
 
+
+// target=  1100111110001101011010111
+// debug=   11010111000110101001111100000001
+
 public class Main {
     public static void main(String[] args) {
 

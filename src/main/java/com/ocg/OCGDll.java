@@ -52,4 +52,5 @@ public interface OCGDll extends Library {
     void set_player_info(long pduel, int playerid, int lp, int startcount, int drawcount);
 
     void get_log_message(long pduel, Pointer buf);
+    int query_card(long pduel,int playerid,int location, int sequence, int query_flag, byte[]buf, int use_cache);
 }

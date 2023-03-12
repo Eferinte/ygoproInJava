@@ -11,8 +11,6 @@ import static com.ocg.dataController.DataManager.GetDesc;
 public class CardReaderImpl implements OCGDll.card_reader {
     @Override
     public int invoke(int code, card_data.ByReference pdata) {
-        System.out.println("read"+code);
-        System.out.println(GetDesc(code).name);
         if (!DataManager.GetDataForCore(code, pdata)) {
             pdata.code = 0;
             pdata.alias = 0;

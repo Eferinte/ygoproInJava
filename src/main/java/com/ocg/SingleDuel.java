@@ -2,9 +2,14 @@ package com.ocg;
 
 import com.ocg.CallbackImpls.CardReaderImpl;
 import com.ocg.CallbackImpls.MessageHandleImpl;
+import com.ocg.utils.BitReader;
 import com.sun.jna.ptr.ByteByReference;
 
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Collections;
+
+import static com.ocg.Constants.MSG_DRAW;
 
 public class SingleDuel extends DuelMode {
 
@@ -17,20 +22,20 @@ public class SingleDuel extends DuelMode {
     protected byte last_response;
     protected byte tp_player;
     protected byte match_result;
-    protected short [] time_limit = new short[2];
+    protected short[] time_limit = new short[2];
     protected short time_elapsed;
 
-    public SingleDuel(boolean is_match){
+    public SingleDuel(boolean is_match) {
 
     }
 
-    public boolean JoinGame(DuelPlayer dp){
-        if(players[0] == null) {
+    public boolean JoinGame(DuelPlayer dp) {
+        if (players[0] == null) {
             players[0] = dp;
             pdeck[0] = dp.use_deck;
             return true;
         }
-        if(players[1] == null) {
+        if (players[1] == null) {
             players[1] = dp;
             pdeck[1] = dp.use_deck;
             return true;
@@ -38,15 +43,17 @@ public class SingleDuel extends DuelMode {
         return false;
     }
 
-    public void StartDuel(){
+    public void StartDuel() {
         hand_result[0] = 0;
         hand_result[1] = 0;
         players[0].state = 3; // CTOS_HAND_RESULT
         players[1].state = 3; // CTOS_HAND_RESULT
         duel_stage = 1; // DUEL_STAGE_FINGER 猜拳
-    };
+    }
 
-    public void TPResult(){
+    ;
+
+    public void TPResult() {
         duel_stage = Constants.DUEL_STAGE_DUELING;
         boolean swapped = false;
         pplayer[0] = players[0];
@@ -58,45 +65,76 @@ public class SingleDuel extends DuelMode {
         OCGDll.INSTANCE.set_message_handler(new MessageHandleImpl());
         OCGDll.INSTANCE.set_card_reader(new CardReaderImpl());
         pduel = OCGDll.INSTANCE.create_duel(39);
-        System.out.println("[SingleDuel]: pduel = " + pduel);
-        OCGDll.INSTANCE.set_player_info(pduel,0, host_info.start_lp, host_info.start_hand,host_info.draw_count);
-        OCGDll.INSTANCE.set_player_info(pduel,1, host_info.start_lp, host_info.start_hand,host_info.draw_count);
-        for (int i = pdeck[0].main_code.size()-1; i >=0;i--){
-            OCGDll.INSTANCE.new_card(pduel, pdeck[0].main_code.get(i), 0, 0, 1, 0,8);
+        OCGDll.INSTANCE.set_player_info(pduel, 0, host_info.start_lp, host_info.start_hand, host_info.draw_count);
+        OCGDll.INSTANCE.set_player_info(pduel, 1, host_info.start_lp, host_info.start_hand, host_info.draw_count);
+        for (int i = pdeck[0].main_code.size() - 1; i >= 0; i--) {
+            OCGDll.INSTANCE.new_card(pduel, pdeck[0].main_code.get(i), 0, 0, 1, 0, 8);
         }
-        for (int i = pdeck[0].extra_code.size()-1; i >=0;i--){
-            OCGDll.INSTANCE.new_card(pduel, pdeck[0].extra_code.get(i), 0 ,0,40, 0,8);
+        for (int i = pdeck[0].extra_code.size() - 1; i >= 0; i--) {
+            OCGDll.INSTANCE.new_card(pduel, pdeck[0].extra_code.get(i), 0, 0, 40, 0, 8);
         }
-//        for (int i = pdeck[1].main_code.size()-1; i >=0;i--){
-//            OCGDll.INSTANCE.new_card(pduel, pdeck[1].main_code.get(i), (byte) 0, (byte) 0, Constants.LOCATION_DECK, (byte) 0,Constants.POS_FACEDOWN_DEFENSE);
-//        }
-//        for (int i = pdeck[1].extra_code.size()-1; i >=0;i--){
-//            OCGDll.INSTANCE.new_card(pduel, pdeck[1].extra_code.get(i), (byte) 0, (byte) 0, Constants.LOCATION_EXTRA, (byte) 0,Constants.POS_FACEDOWN_DEFENSE);
-//        }
+        for (int i = pdeck[1].main_code.size() - 1; i >= 0; i--) {
+            OCGDll.INSTANCE.new_card(pduel, pdeck[1].main_code.get(i), 1, 1, 1, 0, 8);
+        }
+        for (int i = pdeck[1].extra_code.size() - 1; i >= 0; i--) {
+            OCGDll.INSTANCE.new_card(pduel, pdeck[1].extra_code.get(i), 1, 1, 40, 0, 8);
+        }
         OCGDll.INSTANCE.start_duel(pduel, 0x10);
         Process();
     }
 
 
-    void Process(){
+    void Process() {
+        // 如何处理unsigned
         byte[] engineBuffer = new byte[0x1000];
-        int engFlag = 0, engLen = 0;
+        long engFlag = 0, engLen = 0;
         int stop = 0;
-        while(stop != 0){
-            if(engFlag == 2){
+        while (stop == 0) {
+            if (engFlag == 2) {
                 break;
             }
-            int result = OCGDll.INSTANCE.process(pduel);
+            long result = (long) OCGDll.INSTANCE.process(pduel) & 0xffffffff;
             engLen = result & 0xffff;
             engFlag = result >> 16;
-            if(engLen > 0){
+            if (engLen > 0) {
                 OCGDll.INSTANCE.get_message(pduel, engineBuffer);
                 stop = Analyze(engineBuffer, engLen);
             }
         }
     }
 
-    int Analyze(byte[] msgbuffer, int len){
+    // pbufw是干嘛的？
+    int Analyze(byte[] msgbuffer, long len) {
+        int offset, pbufw, pbuf = 0;
+        int player, count, type;
+        ByteBuffer buf = ByteBuffer.wrap(msgbuffer);
+        buf.order(ByteOrder.LITTLE_ENDIAN); //转为小端模式
+        while (pbuf < (int) len) {
+            offset = pbuf;
+            int engType = (int) msgbuffer[pbuf] & 0xff;
+            pbuf++;
+            switch (engType) {
+                case MSG_DRAW -> {
+                    player = (int) msgbuffer[pbuf];
+                    pbuf++;
+                    count = (int) msgbuffer[pbuf];
+                    pbuf++;
+                    pbufw = pbuf;
+                    pbuf += count * 4;
+                    for (int i = 0; i < count; ++i) {
+                        if ((msgbuffer[pbufw + 3] & 0x80) == 0) {
+                            msgbuffer[pbufw] = 0;
+                            msgbuffer[pbufw + 1] = 0;
+                            msgbuffer[pbufw + 2] = 0;
+                            msgbuffer[pbufw + 3] = 0;
+                        }
+                        pbufw += 4;
+                    }
+                    break;
+                }
+            }
+        }
+
         return 0;
     }
 
