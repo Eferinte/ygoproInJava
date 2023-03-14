@@ -25,6 +25,7 @@ public class Main {
 
         if (81 == OCGDll.INSTANCE.jna_test_multi(9, 9)) System.out.println("JNA 连接成功");
         System.out.println("Hello YGO!");
+        Game mainGame = new Game();
         DataManager dm = new DataManager();
         Pointer test = new Memory(100);
         OCGDll.INSTANCE.jna_test_log(test);

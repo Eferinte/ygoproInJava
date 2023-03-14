@@ -167,4 +167,17 @@ public interface Constants {
     public static final int MSG_PLAYER_HINT = 165;
     public static final int MSG_MATCH_KILL = 170;
     public static final int MSG_CUSTOM_MSG = 180;
+
+
+    //Phase
+    public static final int PHASE_DRAW = 0x01;
+    public static final int PHASE_STANDBY = 0x02;
+    public static final int PHASE_MAIN1 = 0x04;
+    public static final int PHASE_BATTLE_START = 0x08;
+    public static final int PHASE_BATTLE_STEP = 0x10;
+    public static final int PHASE_DAMAGE = 0x20;
+    public static final int PHASE_DAMAGE_CAL = 0x40;
+    public static final int PHASE_BATTLE = 0x80;
+    public static final int PHASE_MAIN2 = 0x100;
+    public static final int PHASE_END = 0x200;
 }

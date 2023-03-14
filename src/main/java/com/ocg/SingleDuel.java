@@ -3,13 +3,9 @@ package com.ocg;
 import com.ocg.CallbackImpls.CardReaderImpl;
 import com.ocg.CallbackImpls.MessageHandleImpl;
 import com.ocg.utils.BitReader;
-import com.sun.jna.ptr.ByteByReference;
+import com.ocg.utils.MutateInt;
 
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.util.Collections;
-
-import static com.ocg.Constants.MSG_DRAW;
+import static com.ocg.Constants.*;
 
 public class SingleDuel extends DuelMode {
 
@@ -102,25 +98,55 @@ public class SingleDuel extends DuelMode {
             }
         }
     }
+    void WaitForResponse(int playerId){
+        System.out.println("wait for palyer"+playerId);
+    }
+
 
     // pbufw是干嘛的？
     int Analyze(byte[] msgbuffer, long len) {
-        int offset, pbufw, pbuf = 0;
+        int offset, pbufw= 0;
+        MutateInt pbuf = new MutateInt(0);
         int player, count, type;
-        ByteBuffer buf = ByteBuffer.wrap(msgbuffer);
-        buf.order(ByteOrder.LITTLE_ENDIAN); //转为小端模式
-        while (pbuf < (int) len) {
-            offset = pbuf;
-            int engType = (int) msgbuffer[pbuf] & 0xff;
-            pbuf++;
+        while (pbuf.getValue() < (int) len) {
+            offset = pbuf.getValue();
+            int engType = BitReader.ReadUInt8(msgbuffer,pbuf);
             switch (engType) {
+                case MSG_SELECT_IDLECMD -> {
+                    player = BitReader.ReadInt8(msgbuffer, pbuf);
+                    count = BitReader.ReadUInt8(msgbuffer, pbuf);
+                    pbuf.step(count*7);
+                    count = BitReader.ReadUInt8(msgbuffer, pbuf);
+                    pbuf.step(count*7);
+                    count = BitReader.ReadUInt8(msgbuffer, pbuf);
+                    pbuf.step(count*7);
+                    count = BitReader.ReadUInt8(msgbuffer, pbuf);
+                    pbuf.step(count*7);
+                    count = BitReader.ReadUInt8(msgbuffer, pbuf);
+                    count = BitReader.ReadUInt8(msgbuffer, pbuf);
+                    count = BitReader.ReadUInt8(msgbuffer, pbuf);
+                    pbuf.step(count*11+3);
+                    WaitForResponse(player);
+                    Net.SendBufferToPlayer(players[player],(byte)1,offset,pbuf.getValue()-offset,msgbuffer);
+                    return 1;
+                }
+                case MSG_NEW_TURN -> {
+                    pbuf.step();
+                    Net.SendBufferToPlayer(players[0],(byte)1,offset,pbuf.getValue()-offset,msgbuffer);
+                }
+                case MSG_NEW_PHASE -> {
+                    pbuf.step(2);
+                    Net.SendBufferToPlayer(players[0],(byte)1,offset,pbuf.getValue()-offset,msgbuffer);
+                    Net.SendBufferToPlayer(players[1],(byte)1,offset,pbuf.getValue()-offset,msgbuffer);
+                }
                 case MSG_DRAW -> {
-                    player = (int) msgbuffer[pbuf];
-                    pbuf++;
-                    count = (int) msgbuffer[pbuf];
-                    pbuf++;
-                    pbufw = pbuf;
-                    pbuf += count * 4;
+                    player = BitReader.ReadInt8(msgbuffer,pbuf);
+                    count = BitReader.ReadInt8(msgbuffer,pbuf);
+                    pbufw = pbuf.getValue();
+                    pbuf.step(count * 4);
+
+                    Net.SendBufferToPlayer(players[player],(byte)1,offset,pbuf.getValue()-offset,msgbuffer);
+
                     for (int i = 0; i < count; ++i) {
                         if ((msgbuffer[pbufw + 3] & 0x80) == 0) {
                             msgbuffer[pbufw] = 0;
