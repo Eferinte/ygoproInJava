@@ -1,4 +1,4 @@
-package com.ocg.CallbackImpls;
+package com.ocg.core.CallbackImpls;
 
 import com.sun.jna.Structure;
 @Structure.FieldOrder({"code","alias","setcode","type","level","attribute","race","attack","defense","lscale","rscale","link_marker"})

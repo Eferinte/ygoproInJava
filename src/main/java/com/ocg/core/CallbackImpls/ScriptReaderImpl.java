@@ -1,6 +1,6 @@
-package com.ocg.CallbackImpls;
+package com.ocg.core.CallbackImpls;
 
-import com.ocg.OCGDll;
+import com.ocg.core.OCGDll;
 import com.sun.jna.ptr.ByteByReference;
 import com.sun.jna.ptr.IntByReference;
 

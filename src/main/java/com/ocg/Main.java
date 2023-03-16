@@ -1,20 +1,10 @@
 package com.ocg;
 
 
-import com.ocg.CallbackImpls.CardReaderImpl;
-import com.ocg.CallbackImpls.MessageHandleImpl;
+import com.ocg.core.OCGDll;
 import com.ocg.dataController.DataManager;
-import com.ocg.dataController.DeckReader;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
-
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.util.Enumeration;
 
 
 // target=  1100111110001101011010111

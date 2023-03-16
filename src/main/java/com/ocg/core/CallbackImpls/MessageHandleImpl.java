@@ -1,6 +1,6 @@
-package com.ocg.CallbackImpls;
+package com.ocg.core.CallbackImpls;
 
-import com.ocg.OCGDll;
+import com.ocg.core.OCGDll;
 import com.sun.jna.Memory;
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;

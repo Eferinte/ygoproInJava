@@ -1,6 +1,6 @@
 package com.ocg.dataController;
 
-import com.ocg.CallbackImpls.card_data;
+import com.ocg.core.CallbackImpls.card_data;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

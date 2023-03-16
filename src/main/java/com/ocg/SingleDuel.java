@@ -1,7 +1,8 @@
 package com.ocg;
 
-import com.ocg.CallbackImpls.CardReaderImpl;
-import com.ocg.CallbackImpls.MessageHandleImpl;
+import com.ocg.core.CallbackImpls.CardReaderImpl;
+import com.ocg.core.CallbackImpls.MessageHandleImpl;
+import com.ocg.core.OCGDll;
 import com.ocg.utils.BitReader;
 import com.ocg.utils.MutateInt;
 

@@ -1,6 +1,6 @@
-package com.ocg;
+package com.ocg.core;
 
-import com.ocg.CallbackImpls.card_data;
+import com.ocg.core.CallbackImpls.card_data;
 import com.sun.jna.Callback;
 import com.sun.jna.Library;
 import com.sun.jna.Native;
@@ -11,7 +11,7 @@ import com.sun.jna.ptr.IntByReference;
 public interface OCGDll extends Library {
 
 
-    String OCG_DLL_PATH = "D:\\vs2022_projs\\ocgcore\\x64\\Release\\ocgcore";
+    String OCG_DLL_PATH = "./core/ocgcore";
     OCGDll INSTANCE = Native.load(OCG_DLL_PATH, OCGDll.class);
     int jna_test_multi(int a, int b);
     void jna_test_log(Pointer p);

@@ -1,12 +1,7 @@
-package com.ocg.CallbackImpls;
+package com.ocg.core.CallbackImpls;
 
-import com.ocg.OCGDll;
-import com.ocg.dataController.CardData;
-import com.ocg.dataController.CardDataC;
+import com.ocg.core.OCGDll;
 import com.ocg.dataController.DataManager;
-import com.sun.jna.Pointer;
-
-import static com.ocg.dataController.DataManager.GetDesc;
 
 public class CardReaderImpl implements OCGDll.card_reader {
     @Override
