@@ -29,4 +29,8 @@ public class MutateInt {
     public int getValue() {
         return value;
     }
+    public int getOrigin() {
+        return origin;
+    }
+
 }

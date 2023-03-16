@@ -5,6 +5,6 @@ import com.ocg.utils.MutateInt;
 
 public class Net {
     public static void SendBufferToPlayer(DuelPlayer dp, byte proto, int offset, int length, byte[] buffer) {
-        DuelClient.ClientAnalyze(buffer, new MutateInt(offset),length-1);
+        DuelClient.ClientAnalyze(buffer, offset,length-1);
     }
 }

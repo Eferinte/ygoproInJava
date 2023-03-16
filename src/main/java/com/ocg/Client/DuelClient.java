@@ -9,18 +9,21 @@ import static com.ocg.Constants.PHASE_END;
 import static com.ocg.Game.mainGame;
 
 public class DuelClient {
-    public static void ClientAnalyze(byte[] msgbuffer, MutateInt offset, int length) {
-        int msgType = BitReader.ReadUInt8(msgbuffer,offset);
+    public static void ClientAnalyze(byte[] msgbuffer, int offset, int length) {
+        BitReader buffer = new BitReader(msgbuffer, offset);
+        int msgType = buffer.readUInt8();
         switch (msgType) {
             case MSG_SELECT_IDLECMD -> {
-                offset.step();
+                buffer.readInt8();
                 int code, desc, count, con, loc, seq;
                 ClientCard pcard;
                 mainGame.dField.summonable_cards.clear();
-                count = BitReader.ReadInt8(msgbuffer, offset);;
-                for(int i=0;i<count;i++){
-                    code = BitReader.ReadInt32(msgbuffer,offset);
-                    con = mainGame.LocalPlayer(BitReader.ReadInt8(msgbuffer,offset));
+                count = buffer.readInt8();
+                for (int i = 0; i < count; i++) {
+                    code = buffer.readInt8();
+                    con = mainGame.LocalPlayer(buffer.readInt8());
+                    loc = buffer.readInt8();
+                    loc = buffer.readInt8();
                 }
 
             }
@@ -28,7 +31,7 @@ public class DuelClient {
                 System.out.println("new turn");
             }
             case MSG_NEW_PHASE -> {
-                int phase = BitReader.ReadUInt8(msgbuffer, offset);
+                int phase = buffer.readUInt8();
                 switch (phase) {
                     case PHASE_DRAW -> {
                         System.out.println("DRAW");
@@ -52,13 +55,13 @@ public class DuelClient {
                 }
             }
             case MSG_DRAW -> {
-                int player = BitReader.ReadInt8(msgbuffer, offset);
-                int count = BitReader.ReadInt8(msgbuffer, offset);
+                int player = buffer.readInt8();
+                int count = buffer.readInt8();
 
                 System.out.println("playerId =" + player);
                 System.out.println("draw count =" + count);
                 for (int i = 0; i < count; i++) {
-                    int code = BitReader.ReadInt32(msgbuffer, offset);
+                    int code = buffer.readInt32();
                     System.out.println("card code =" + DataManager.GetDesc(code).name);
                 }
             }
