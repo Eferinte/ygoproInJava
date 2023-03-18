@@ -1,6 +1,7 @@
 package com.ocg.Client;
 
 import com.ocg.ChainInfo;
+import com.ocg.dataController.DataManager;
 
 import java.util.*;
 
@@ -14,18 +15,17 @@ public class ClientField {
     public Vector<ClientCard>[] grave = new Vector[2];
     public Vector<ClientCard>[] remove = new Vector[2];
     public Vector<ClientCard>[] extra = new Vector[2];
-    public Set<ClientCard> overlaycards = new HashSet<>();
-    public Vector<ClientCard> summonable_cards = new Vector<>() ;
+    public Set<ClientCard> overlay_cards = new HashSet<>();
+    public Vector<ClientCard> summonable_cards = new Vector<>();
     public Vector<ClientCard> spsummonable_cards = new Vector<>();
-    public Vector<ClientCard> msetablecards = new Vector<>();
-    public Vector<ClientCard> ssetablecards = new Vector<>();
-    public Vector<ClientCard> spsummonable = new Vector<>();
-    public Vector<ClientCard> reposable = new Vector<>();
-    public Vector<ClientCard> activatable = new Vector<>();
+    public Vector<ClientCard> msetable_cards = new Vector<>();
+    public Vector<ClientCard> ssetable_cards = new Vector<>();
+    public Vector<ClientCard> reposable_cards = new Vector<>();
+    public Vector<ClientCard> activatable_cards = new Vector<>();
 
-    public Vector<ClientCard> attackable = new Vector<>();
-    public Vector<ClientCard> conticards = new Vector<>();
-    public Vector<Map<Integer, Integer>> activatabledescs = new Vector<>();
+    public Vector<ClientCard> attackable_cards = new Vector<>();
+    public Vector<ClientCard> conti_cards = new Vector<>();
+    public Vector<Map<Integer, Integer>> activatable_descs = new Vector<>();
     public Vector<Integer> select_options = new Vector<>();
     public Vector<Integer> select_options_index = new Vector<>();
     public Vector<ChainInfo> chains = new Vector<>();
@@ -107,14 +107,16 @@ public class ClientField {
         for (int p = 0; p < 2; ++p) {
             mzone[p].setSize(7);
             szone[p].setSize(8);
+            deck[p]=new Vector<>();
+            hand[p]=new Vector<>();
         }
     }
 
     public void Initial(int player, int deckc, int extrac) {
         ClientCard pcard;
-        for(int i=0;i<deckc;i++){
+        for (int i = 0; i < deckc; i++) {
             pcard = new ClientCard();
-            pcard.owner= player;
+            pcard.owner = player;
             pcard.controller = player;
             pcard.location = LOCATION_DECK;
             pcard.sequence = i;
@@ -122,9 +124,9 @@ public class ClientField {
             deck[player].add(pcard);
             GetCardLocation(pcard);
         }
-        for(int i=0;i<extrac;i++){
+        for (int i = 0; i < extrac; i++) {
             pcard = new ClientCard();
-            pcard.owner= player;
+            pcard.owner = player;
             pcard.controller = player;
             pcard.location = LOCATION_EXTRA;
             pcard.sequence = i;
@@ -135,5 +137,171 @@ public class ClientField {
     }
 
     public void GetCardLocation(ClientCard pcard) {
+    }
+
+    public ClientCard GetCard(int controller, int location, int sequence) {
+        Vector<ClientCard> list = null;
+        boolean is_xyz = (location & LOCATION_OVERLAY) != 0;
+        location &= 0x7f;
+        switch (location) {
+            case LOCATION_DECK -> {
+                list = deck[controller];
+                break;
+            }
+            case LOCATION_HAND -> {
+                list = hand[controller];
+                break;
+            }
+            case LOCATION_MZONE -> {
+                list = mzone[controller];
+                break;
+            }
+            case LOCATION_SZONE -> {
+                list = szone[controller];
+                break;
+            }
+            case LOCATION_GRAVE -> {
+                list = grave[controller];
+                break;
+            }
+            case LOCATION_REMOVED -> {
+                list = remove[controller];
+                break;
+            }
+            case LOCATION_EXTRA -> {
+                list = extra[controller];
+                break;
+            }
+        }
+        if (list == null) return null;
+        if (is_xyz) {
+            return null;
+        }
+        if (sequence >= list.size()) return null;
+        return list.get(sequence);
+    }
+
+    public ClientCard GetCard(int controller, int location, int sequence, int sub_seq) {
+        Vector<ClientCard> list = null;
+        boolean is_xyz = (location & LOCATION_OVERLAY) != 0;
+        location &= 0x7f;
+        switch (location) {
+            case LOCATION_DECK -> {
+                list = deck[controller];
+                break;
+            }
+            case LOCATION_HAND -> {
+                list = hand[controller];
+                break;
+            }
+            case LOCATION_MZONE -> {
+                list = mzone[controller];
+                break;
+            }
+            case LOCATION_SZONE -> {
+                list = szone[controller];
+                break;
+            }
+            case LOCATION_GRAVE -> {
+                list = grave[controller];
+                break;
+            }
+            case LOCATION_REMOVED -> {
+                list = remove[controller];
+                break;
+            }
+            case LOCATION_EXTRA -> {
+                list = extra[controller];
+                break;
+            }
+        }
+        if (list == null) return null;
+        if (is_xyz) {
+            if (sequence >= list.size()) return null;
+            ClientCard scard = list.get(sequence);
+            if (scard != null && (scard.overlayed.size() > sub_seq)) return scard.overlayed.get(sub_seq);
+            return null;
+        }
+        if (sequence >= list.size()) return null;
+        return list.get(sequence);
+    }
+
+    public void MoveCard(ClientCard pcard, int frame) {
+        String name = "";
+        if(DataManager.GetDesc(pcard.code)!=null){
+            name = DataManager.GetDesc(pcard.code).name;
+        }
+        System.out.println("move card " + pcard.code + " to frame " + frame);
+    }
+
+    public void AddCard(ClientCard pcard, int controller, int location, int sequence) {
+        pcard.controller = controller;
+        pcard.location = location;
+        pcard.sequence = sequence;
+        switch (location) {
+            case LOCATION_DECK -> {
+                if (sequence != 0 || deck[controller].size() == 0) {
+                    deck[controller].add(pcard);
+                    pcard.sequence = deck[controller].size() - 1;
+                } else {
+                    deck[controller].add(null);
+                    for (int i = deck[controller].size() - 1; i > 0; i--) {
+                        deck[controller].set(i, deck[controller].get(i - 1));
+                        deck[controller].get(i).sequence++;
+                    }
+                    deck[controller].set(0, pcard);
+                    pcard.sequence = 0;
+                }
+                pcard.is_reversed = false;
+                break;
+            }
+            case LOCATION_HAND -> {
+                hand[controller].add(pcard);
+                pcard.sequence = hand[controller].size() - 1;
+                break;
+            }
+            case LOCATION_MZONE -> {
+                mzone[controller].set(sequence, pcard);
+                break;
+            }
+            case LOCATION_SZONE -> {
+                szone[controller].set(sequence, pcard);
+                break;
+            }
+            case LOCATION_GRAVE -> {
+                grave[controller].add(pcard);
+                pcard.sequence = grave[controller].size() - 1;
+                break;
+            }
+            case LOCATION_REMOVED -> {
+                remove[controller].add(pcard);
+                pcard.sequence = remove[controller].size() - 1;
+                break;
+            }
+            case LOCATION_EXTRA -> {
+                if (extra_p_count[controller] == 0 || (pcard.position & POS_FACEUP) != 0) {
+                    extra[controller].add(pcard);
+                    pcard.sequence = extra[controller].size() - 1;
+                } else {
+                    extra[controller].add(null);
+                    int p = extra[controller].size() - extra_p_count[controller] - 1;
+                    for (int i = extra[controller].size() - 1; i > p; i--) {
+                        extra[controller].set(i, extra[controller].get(i - 1));
+                        extra[controller].get(i).sequence++;
+                        //TODO 接口化
+                        System.out.println("将card " + DataManager.GetDesc(pcard.code) + " 加入额外卡组");
+                    }
+                    extra[controller].set(p, pcard);
+                    pcard.sequence = p;
+                }
+                if ((pcard.position & POS_FACEUP) != 0) {
+                    extra_p_count[controller]++;
+                }
+                break;
+            }
+        }
+    }
+    public void Clear(){
+
     }
 }

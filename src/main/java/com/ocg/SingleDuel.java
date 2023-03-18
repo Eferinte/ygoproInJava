@@ -4,6 +4,7 @@ import com.ocg.core.CallbackImpls.CardReaderImpl;
 import com.ocg.core.CallbackImpls.MessageHandleImpl;
 import com.ocg.core.OCGDll;
 import com.ocg.utils.BitReader;
+import com.ocg.utils.BitWriter;
 import com.ocg.utils.MutateInt;
 
 import static com.ocg.Constants.*;
@@ -27,25 +28,29 @@ public class SingleDuel extends DuelMode {
     }
 
     public boolean JoinGame(DuelPlayer dp) {
-        if (players[0] == null) {
-            players[0] = dp;
-            pdeck[0] = dp.use_deck;
-            return true;
-        }
-        if (players[1] == null) {
-            players[1] = dp;
-            pdeck[1] = dp.use_deck;
-            return true;
-        }
-        return false;
+        return true;
     }
 
     public void StartDuel() {
+        Net.SendBufferToPlayer(players[0],STOC_DUEL_START,0,0,null);
+        Net.SendBufferToPlayer(players[1],STOC_DUEL_START,0,0,null);
+        for(int i=0;i<2;i++){
+            byte[] deck_buffer = new byte[12];
+            BitWriter deck_writer = new BitWriter(deck_buffer,0);
+            deck_writer.writeInt16(pdeck[i].main.size());
+            deck_writer.writeInt16(pdeck[i].extra.size());
+            deck_writer.writeInt16(pdeck[i].side.size());
+            deck_writer.writeInt16(pdeck[1-i].main.size());
+            deck_writer.writeInt16(pdeck[1-i].extra.size());
+            deck_writer.writeInt16(pdeck[1-i].side.size());
+            Net.SendBufferToPlayer(players[i],STOC_DECK_COUNT,0,12,deck_buffer);
+        }
+        Net.SendBufferToPlayer(players[0],STOC_SELECT_HAND,0,0,null);
         hand_result[0] = 0;
         hand_result[1] = 0;
-        players[0].state = 3; // CTOS_HAND_RESULT
-        players[1].state = 3; // CTOS_HAND_RESULT
-        duel_stage = 1; // DUEL_STAGE_FINGER 猜拳
+        players[0].state = CTOS_HAND_RESULT; // CTOS_HAND_RESULT
+        players[1].state = CTOS_HAND_RESULT; // CTOS_HAND_RESULT
+        duel_stage = DUEL_STAGE_FINGER; // DUEL_STAGE_FINGER 猜拳
     }
 
     ;
@@ -163,6 +168,16 @@ public class SingleDuel extends DuelMode {
         }
 
         return 0;
+    }
+    void UpdateDeck(DuelPlayer dp){
+        if (players[0] == null) {
+            players[0] = dp;
+            pdeck[0] = dp.use_deck;
+        }
+        if (players[1] == null) {
+            players[1] = dp;
+            pdeck[1] = dp.use_deck;
+        }
     }
 
 

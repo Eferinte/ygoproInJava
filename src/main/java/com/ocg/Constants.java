@@ -20,6 +20,30 @@ public interface Constants {
     public static final byte CTOS_TIME_CONFIRM = 0x15;
     public static final byte CTOS_CHAT = 0x16;
 
+
+    public static final byte STOC_GAME_MSG = 0x1;
+    public static final byte STOC_ERROR_MSG = 0x2;
+    public static final byte STOC_SELECT_HAND = 0x3;
+    public static final byte STOC_SELECT_TP = 0x4;
+    public static final byte STOC_HAND_RESULT = 0x5;
+    public static final byte STOC_TP_RESULT = 0x6;
+    public static final byte STOC_CHANGE_SIDE = 0x7;
+    public static final byte STOC_WAITING_SIDE = 0x8;
+    public static final byte STOC_DECK_COUNT = 0x9;
+    public static final byte STOC_CREATE_GAME = 0x11;
+    public static final byte STOC_JOIN_GAME = 0x12;
+    public static final byte STOC_TYPE_CHANGE = 0x13;
+    public static final byte STOC_LEAVE_GAME = 0x14;
+    public static final byte STOC_DUEL_START = 0x15;
+    public static final byte STOC_DUEL_END = 0x16;
+    public static final byte STOC_REPLAY = 0x17;
+    public static final byte STOC_TIME_LIMIT = 0x18;
+    public static final byte STOC_CHAT = 0x19;
+    public static final byte STOC_HS_PLAYER_ENTER = 0x20;
+    public static final byte STOC_HS_PLAYER_CHANGE = 0x21;
+    public static final byte STOC_HS_WATCH_CHANGE = 0x22;
+
+
     // Locations
     public static final byte LOCATION_DECK = 0x01;
     public static final byte LOCATION_HAND = 0x02;
@@ -180,4 +204,18 @@ public interface Constants {
     public static final int PHASE_BATTLE = 0x80;
     public static final int PHASE_MAIN2 = 0x100;
     public static final int PHASE_END = 0x200;
+
+    public static final int COMMAND_ACTIVATE = 0x0001;
+    public static final int COMMAND_SUMMON = 0x0002;
+    public static final int COMMAND_SPSUMMON = 0x0004;
+    public static final int COMMAND_MSET = 0x0008;
+    public static final int COMMAND_SSET = 0x0010;
+    public static final int COMMAND_REPOS = 0x0020;
+    public static final int COMMAND_ATTACK = 0x0040;
+    public static final int COMMAND_LIST = 0x0080;
+    public static final int COMMAND_OPERATION = 0x0100;
+    public static final int COMMAND_RESET = 0x0200;
+    //
+    public static final int EDESC_OPERATION = 1;
+    public static final int EDESC_RESET = 2;
 }

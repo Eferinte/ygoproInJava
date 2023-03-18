@@ -20,7 +20,7 @@ public class BitReader {
         int ans = 0;
         for (int i = 0; i < 4; i++) {
             ans |= buffer[value + i];
-            ans = ans << 8;
+            if(i!=3) ans = ans << 8;
         }
         return ans;
     }
@@ -43,6 +43,18 @@ public class BitReader {
         int value = ptr.getValue();
         ptr.step();
         return (int) (buffer[value]);
+    }
+    public int readInt16() {
+        int value = ptr.getValue();
+        ptr.step(2);
+        if (value < 0) return -1;
+        if (value > buffer.length - 2) return -1;
+        int ans = 0;
+        for (int i = 0; i < 2; i++) {
+            ans |= buffer[value + i];
+            if(i!=1) ans = ans << 8;
+        }
+        return ans;
     }
 
     public int getPosition() {

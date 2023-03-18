@@ -8,13 +8,22 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
 
+class DataCardPair{
+    int code;
+    CardDataC data;
+    public DataCardPair(int _code, CardDataC _data){
+        code = _code;
+        data = _data;
+    }
+}
+
 public class Deck {
     public Vector<Integer> main_code;
     public Vector<Integer> extra_code;
     public Vector<Integer> side_code;
-    public Vector<CardDataC> main;
-    public Vector<CardDataC> extra;
-    public Vector<CardDataC> side;
+    public Vector<DataCardPair> main;
+    public Vector<DataCardPair> extra;
+    public Vector<DataCardPair> side;
 
     public Deck() {
 
@@ -24,6 +33,20 @@ public class Deck {
 
     }
 
+    public void LoadCardData() {
+        main = new Vector<>();
+        extra = new Vector<>();
+        side = new Vector<>();
+        for (int i = 0; i < main_code.size(); i++) {
+            main.add(new DataCardPair(main_code.get(i),DataManager.GetData(main_code.get(i))));
+        }
+        for (int i = 0; i < extra_code.size(); i++) {
+            extra.add(new DataCardPair(extra_code.get(i),DataManager.GetData(extra_code.get(i))));
+        }
+        for (int i = 0; i < side_code.size(); i++) {
+            side.add(new DataCardPair(side_code.get(i),DataManager.GetData(side_code.get(i))));
+        }
+    }
 
     @Override
     public String toString() {

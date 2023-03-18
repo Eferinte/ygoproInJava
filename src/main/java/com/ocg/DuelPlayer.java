@@ -13,6 +13,7 @@ public class DuelPlayer {
     }
     public boolean LoadDefault() {
         use_deck = DeckReader.ReadYDK("D:\\MyCardLibrary\\ygopro\\deck\\闪刀.ydk");
+        use_deck.LoadCardData();
         return true;
     }
 

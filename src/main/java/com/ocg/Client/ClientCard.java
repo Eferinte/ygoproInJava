@@ -1,8 +1,12 @@
 package com.ocg.Client;
 
+import com.ocg.Game;
+
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+
+import static com.ocg.Constants.LOCATION_HAND;
 
 public class ClientCard {
     public boolean is_moving;
@@ -100,5 +104,10 @@ public class ClientCard {
         lscstring[0] = "";
         overlayTarget = null;
         equipTarget = null;
+    }
+
+    public void SetCode(int code, Game mainGame) {
+        if (location == LOCATION_HAND && this.code != code) mainGame.dField.MoveCard(this, 5);
+        this.code = code;
     }
 }
