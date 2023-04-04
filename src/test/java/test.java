@@ -4,7 +4,10 @@ import java.util.Vector;
 
 public class test {
     public static void main(String[] args) {
-        Vector<ClientCard> deck = new Vector<>();
-        System.out.println(deck.size());
+        for(int i=0;i<10;i++){
+            if(i==7){
+                break;
+            }
+        }
     }
 }

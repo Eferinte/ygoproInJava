@@ -1,2 +1,9 @@
-package com.ocg.Client;public class Client {
+package com.ocg.Client;
+
+import java.io.*;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
+public class Client {
+
 }

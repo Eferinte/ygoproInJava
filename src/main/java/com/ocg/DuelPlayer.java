@@ -3,13 +3,26 @@ package com.ocg;
 import com.ocg.dataController.DeckReader;
 
 public class DuelPlayer {
-    short[] name = new short[20];
+    public String name;
+    public String ip;
     Deck use_deck;
     byte type;
     byte state;
-    DuelPlayer(){
+    DuelMode game;
+    public DuelPlayer(){
         type = 0;
         state = 0;
+    }
+    public DuelPlayer(String name){
+        type = 0;
+        state = 0;
+        this.name = name;
+    }
+    public DuelPlayer(String name,String ip){
+        type = 0;
+        state = 0;
+        this.name = name;
+        this.ip = ip;
     }
     public boolean LoadDefault() {
         use_deck = DeckReader.ReadYDK("D:\\MyCardLibrary\\ygopro\\deck\\闪刀.ydk");

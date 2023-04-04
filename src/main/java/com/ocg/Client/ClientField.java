@@ -304,4 +304,12 @@ public class ClientField {
     public void Clear(){
 
     }
+    public void HideMenu(){
+
+    }
+    public void showMenu(){}
+    public  void ClearCommandFlag(){
+
+    }
+
 }

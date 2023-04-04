@@ -14,7 +14,7 @@ public class DuelInfo {
     public int start_lp;
     public int duel_rule;
     public int turn;
-    public short curMsg;
+    public int curMsg;
     public String hostname;
     public String clientname;
     public String hostname_tag;

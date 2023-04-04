@@ -5,19 +5,18 @@ import com.ocg.core.CallbackImpls.MessageHandleImpl;
 import com.ocg.core.OCGDll;
 import com.ocg.utils.BitReader;
 import com.ocg.utils.BitWriter;
-import com.ocg.utils.MutateInt;
 
 import static com.ocg.Constants.*;
 
 public class SingleDuel extends DuelMode {
 
-    protected DuelPlayer[] players = new DuelPlayer[2];
-    protected DuelPlayer[] pplayer = new DuelPlayer[2];
+    public static DuelPlayer[] players = new DuelPlayer[2];
+    public DuelPlayer[] pplayer = new DuelPlayer[2];
     protected boolean[] ready = new boolean[2];
     protected Deck[] pdeck = new Deck[2];
     protected int[] deck_error = new int[2];
     protected byte[] hand_result = new byte[2];
-    protected byte last_response;
+    protected int last_response;
     protected byte tp_player;
     protected byte match_result;
     protected short[] time_limit = new short[2];
@@ -27,25 +26,34 @@ public class SingleDuel extends DuelMode {
 
     }
 
-    public boolean JoinGame(DuelPlayer dp) {
-        return true;
+    public String JoinGame(DuelPlayer dp) {
+        dp.game = this;
+        if(players[0]==null) {
+            players[0] = dp;
+            return "加入成功";
+        }
+        else if (players[1]==null) {
+            players[1]=dp;
+            return "加入成功";
+        }
+        return "加入失败，房间人数已满";
     }
 
     public void StartDuel() {
-        Net.SendBufferToPlayer(players[0],STOC_DUEL_START,0,0,null);
-        Net.SendBufferToPlayer(players[1],STOC_DUEL_START,0,0,null);
-        for(int i=0;i<2;i++){
+        NetServer.SendBufferToPlayer(players[0], STOC_DUEL_START, 0, 0, null);
+        NetServer.SendBufferToPlayer(players[1], STOC_DUEL_START, 0, 0, null);
+        for (int i = 0; i < 2; i++) {
             byte[] deck_buffer = new byte[12];
-            BitWriter deck_writer = new BitWriter(deck_buffer,0);
+            BitWriter deck_writer = new BitWriter(deck_buffer, 0);
             deck_writer.writeInt16(pdeck[i].main.size());
             deck_writer.writeInt16(pdeck[i].extra.size());
             deck_writer.writeInt16(pdeck[i].side.size());
-            deck_writer.writeInt16(pdeck[1-i].main.size());
-            deck_writer.writeInt16(pdeck[1-i].extra.size());
-            deck_writer.writeInt16(pdeck[1-i].side.size());
-            Net.SendBufferToPlayer(players[i],STOC_DECK_COUNT,0,12,deck_buffer);
+            deck_writer.writeInt16(pdeck[1 - i].main.size());
+            deck_writer.writeInt16(pdeck[1 - i].extra.size());
+            deck_writer.writeInt16(pdeck[1 - i].side.size());
+            NetServer.SendBufferToPlayer(players[i], STOC_DECK_COUNT, 0, 12, deck_buffer);
         }
-        Net.SendBufferToPlayer(players[0],STOC_SELECT_HAND,0,0,null);
+        NetServer.SendBufferToPlayer(players[0], STOC_SELECT_HAND, 0, 0, null);
         hand_result[0] = 0;
         hand_result[1] = 0;
         players[0].state = CTOS_HAND_RESULT; // CTOS_HAND_RESULT
@@ -86,7 +94,7 @@ public class SingleDuel extends DuelMode {
     }
 
 
-    void Process() {
+    public void Process() {
         // 如何处理unsigned
         byte[] engineBuffer = new byte[0x1000];
         long engFlag = 0, engLen = 0;
@@ -104,46 +112,75 @@ public class SingleDuel extends DuelMode {
             }
         }
     }
-    void WaitForResponse(int playerId){
-        System.out.println("wait for palyer"+playerId);
+
+    void WaitForResponse(int playerId) {
+        last_response = playerId;
+        byte msg = MSG_WAITING;
+        NetServer.SendPacketToPlayer(players[1-playerId],STOC_GAME_MSG,msg);
+        System.out.println("wait for palyer" + playerId);
     }
 
 
     // pbufw是干嘛的？
-    int Analyze(byte[] msgbuffer, long len) {
-        int offset=0, pbufw= 0;
+    public int Analyze(byte[] msgbuffer, long len) {
+        int offset = 0, pbufw = 0;
         BitReader buffer = new BitReader(msgbuffer, 0);
         int player, count, type;
         while (buffer.getPosition() < (int) len) {
             offset = buffer.getPosition();
             int engType = buffer.readUInt8();
             switch (engType) {
+                case MSG_RETRY -> {
+                    WaitForResponse(last_response);
+                    NetServer.SendBufferToPlayer(players[last_response], STOC_GAME_MSG, offset, buffer.getPosition() - offset);
+                    return 1;
+                }
+                case MSG_HINT -> {
+                    type = buffer.readInt8();
+                    player = buffer.readInt8();
+                    buffer.readInt32();
+                    switch (type) {
+                        case 5 -> { // 发给自己
+                            NetServer.SendBufferToPlayer(players[player], STOC_GAME_MSG, offset, buffer.getPosition() - offset);
+                            break;
+                        }
+                        case 11 -> { // 发给其他人
+                            NetServer.SendBufferToPlayer(players[1 - player], STOC_GAME_MSG, offset, buffer.getPosition() - offset);
+                            break;
+                        }
+                        case 10 -> { // 全局消息
+                            NetServer.SendBufferToPlayer(players[player], STOC_GAME_MSG, offset, buffer.getPosition() - offset);
+                            NetServer.SendBufferToPlayer(players[1 - player], STOC_GAME_MSG, offset, buffer.getPosition() - offset);
+                        }
+                    }
+                    break;
+                }
                 case MSG_SELECT_IDLECMD -> {
                     player = buffer.readInt8();
                     count = buffer.readInt8();
-                    buffer.step(count*7);
+                    buffer.step(count * 7);
                     count = buffer.readInt8();
-                    buffer.step(count*7);
+                    buffer.step(count * 7);
                     count = buffer.readInt8();
-                    buffer.step(count*7);
+                    buffer.step(count * 7);
                     count = buffer.readInt8();
-                    buffer.step(count*7);
-                    count =buffer.readInt8();
+                    buffer.step(count * 7);
                     count = buffer.readInt8();
                     count = buffer.readInt8();
-                    buffer.step(count*11+3);
+                    count = buffer.readInt8();
+                    buffer.step(count * 11 + 3);
                     WaitForResponse(player);
-                    Net.SendBufferToPlayer(players[player],(byte)1,offset,buffer.getPosition()-offset,msgbuffer);
+                    NetServer.SendBufferToPlayer(players[player], (byte) 1, offset, buffer.getPosition() - offset, msgbuffer);
                     return 1;
                 }
                 case MSG_NEW_TURN -> {
                     buffer.step();
-                    Net.SendBufferToPlayer(players[0],(byte)1,offset,buffer.getPosition()-offset,msgbuffer);
+                    NetServer.SendBufferToPlayer(players[0], (byte) 1, offset, buffer.getPosition() - offset, msgbuffer);
                 }
                 case MSG_NEW_PHASE -> {
                     buffer.step(2);
-                    Net.SendBufferToPlayer(players[0],(byte)1,offset,buffer.getPosition()-offset,msgbuffer);
-                    Net.SendBufferToPlayer(players[1],(byte)1,offset,buffer.getPosition()-offset,msgbuffer);
+                    NetServer.SendBufferToPlayer(players[0], (byte) 1, offset, buffer.getPosition() - offset, msgbuffer);
+                    NetServer.SendBufferToPlayer(players[1], (byte) 1, offset, buffer.getPosition() - offset, msgbuffer);
                 }
                 case MSG_DRAW -> {
                     player = buffer.readInt8();
@@ -151,7 +188,7 @@ public class SingleDuel extends DuelMode {
                     pbufw = buffer.getPosition();
                     buffer.step(count * 4);
 
-                    Net.SendBufferToPlayer(players[player],(byte)1,offset,buffer.getPosition()-offset,msgbuffer);
+                    NetServer.SendBufferToPlayer(players[player], (byte) 1, offset, buffer.getPosition() - offset, msgbuffer);
 
                     for (int i = 0; i < count; ++i) {
                         if ((msgbuffer[pbufw + 3] & 0x80) == 0) {
@@ -169,15 +206,22 @@ public class SingleDuel extends DuelMode {
 
         return 0;
     }
-    void UpdateDeck(DuelPlayer dp){
-        if (players[0] == null) {
-            players[0] = dp;
-            pdeck[0] = dp.use_deck;
+
+    public void UpdateDeck() {
+        //LoadDeck
+        pdeck[0]=players[0].use_deck;
+        pdeck[1]=players[1].use_deck;
+    }
+
+    public void GetResponse(DuelPlayer dp, byte[] pdata, int len) {
+        byte[] resb = new byte[64];
+        for (int i = 0; i < len; i++) {
+            resb[i] = pdata[i];
         }
-        if (players[1] == null) {
-            players[1] = dp;
-            pdeck[1] = dp.use_deck;
-        }
+        OCGDll.INSTANCE.set_responseb(pduel, resb);
+        players[dp.type].state = (byte) 0xff;
+        //TODO timelimit
+        Process();
     }
 
 
