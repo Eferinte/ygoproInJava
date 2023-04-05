@@ -13,13 +13,8 @@ dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 
-    // https://mvnrepository.com/artifact/net.java.dev.jna/jna
     implementation group: 'net.java.dev.jna', name: 'jna', version: '5.12.1'
-    implementation files('lib/sg-cdb-1.0.4.jar')
-    // https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
     implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.41.0.0'
-
-
 
 
 }
@@ -29,4 +24,14 @@ test {
 }
 tasks.withType(JavaCompile) {
     options.encoding = "UTF-8"
+}
+jar {
+    // 指定JAR文件的名称
+    archiveFileName = 'ygoInJava-client.jar'
+    manifest {
+        attributes 'Main-Class': 'com.ocg.Client.DuelClient.main'
+    }
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
