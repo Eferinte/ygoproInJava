@@ -1,21 +1,21 @@
 package com.ocg.Client;
 
-import com.ocg.DuelPlayer;
 import com.ocg.NetServer;
-import com.ocg.dataController.DataManager;
+import com.ocg.Server.MessageFormatter;
+import com.ocg.SingleDuel;
 import com.ocg.utils.BitReader;
 import com.ocg.utils.BitWriter;
-import com.ocg.utils.MutateInt;
+import org.java_websocket.WebSocket;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 import static com.ocg.Constants.*;
 import static com.ocg.Constants.PHASE_END;
-import static com.ocg.Main.mainGame;
+import static com.ocg.Main.*;
 
 public class DuelClient {
     public static byte[] response_buf = new byte[64];
@@ -32,10 +32,10 @@ public class DuelClient {
             Scanner in = new Scanner(System.in);
             while (true) {
                 String buffer = "";
-                 if(in.hasNextLine()) {
+                if (in.hasNextLine()) {
                     buffer = in.nextLine();
                 }
-                socket.getOutputStream().write((buffer+"over").getBytes("UTF-8"));
+                socket.getOutputStream().write((buffer + "over").getBytes());
                 socket.getOutputStream().flush();
 
                 //流模式下只要不关闭，就可以反复持有，获取数据。  输入流还是那个。
@@ -51,7 +51,7 @@ public class DuelClient {
                         break;
                     }
                 }
-                System.out.println("[server]: " + sb.toString().substring(0, sb.toString().length() - 4).replaceAll("\n","\n[server]: "));
+                System.out.println("[server]: " + sb.toString().substring(0, sb.toString().length() - 4).replaceAll("\n", "\n[server]: "));
 //                }
             }
         } catch (IOException e) {
@@ -102,7 +102,15 @@ public class DuelClient {
             case MSG_START -> {
                 System.out.println("start");
             }
+            case MSG_UPDATE_DATA -> {
+                int player = mainGame.LocalPlayer(buffer.readInt8());
+                int location = buffer.readInt8();
+                mainGame.dField.UpdateFieldCard(player,location,buffer.getBuffer());
+            }
             case MSG_SELECT_IDLECMD -> {
+                /**
+                 * 计算cmdFlag
+                 */
                 buffer.readInt8();
                 int code, desc, count, con, loc, seq;
                 ClientCard pcard;
@@ -128,14 +136,14 @@ public class DuelClient {
                     mainGame.dField.spsummonable_cards.add(pcard);
                     pcard.cmdFlag |= COMMAND_SPSUMMON;
                     if (pcard.location == LOCATION_DECK) {
-                        pcard.SetCode(code, mainGame);
+                        pcard.SetCode(code);
                         mainGame.dField.deck_act = true;
                     } else if (pcard.location == LOCATION_GRAVE) {
-                        mainGame.dField.deck_act = true;
+                        mainGame.dField.grave_act = true;
                     } else if (pcard.location == LOCATION_REMOVED) {
-                        mainGame.dField.deck_act = true;
+                        mainGame.dField.remove_act = true;
                     } else if (pcard.location == LOCATION_EXTRA) {
-                        mainGame.dField.deck_act = true;
+                        mainGame.dField.extra_act = true;
                     } else {
                         if ((pcard.location == LOCATION_SZONE) && (pcard.sequence == 0) && ((pcard.type & TYPE_PENDULUM) != 0) && (pcard.equipTarget == null)) {
                             mainGame.dField.pzone_act[pcard.controller] = true;
@@ -193,7 +201,7 @@ public class DuelClient {
                         code = 0x7fffffff;
                     }
                     mainGame.dField.activatable_cards.add(pcard);
-                    mainGame.dField.activatable_descs.add(new HashMap<>(desc, flag));
+                    mainGame.dField.activatable_descs.add(new HashMap<>(Map.of(desc, flag)));
                     if (flag == EDESC_OPERATION) {
                         pcard.chain_code = code;
                         mainGame.dField.conti_cards.add(pcard);
@@ -210,6 +218,7 @@ public class DuelClient {
                         }
                     }
                 }
+                System.out.println(mainGame.dField);
                 if (buffer.readInt8() != 0) {
                     // TODO 接口化
                     System.out.println("显示BattlePhase按钮");
@@ -238,22 +247,28 @@ public class DuelClient {
                 switch (phase) {
                     case PHASE_DRAW -> {
                         System.out.println("DRAW");
+                        server.BroadcastToDuelist("DRAW", MessageFormatter.MessageType.DECLARE);
                     }
                     case PHASE_STANDBY -> {
                         System.out.println("STANDBY");
+                        server.BroadcastToDuelist("STANDBY", MessageFormatter.MessageType.DECLARE);
                     }
                     case PHASE_MAIN1 -> {
                         System.out.println("M1");
+                        server.BroadcastToDuelist("M1", MessageFormatter.MessageType.DECLARE);
                     }
                     case PHASE_BATTLE_START -> {
 
                         System.out.println("BATTLE_START");
+                        server.BroadcastToDuelist("BATTLE", MessageFormatter.MessageType.DECLARE);
                     }
                     case PHASE_MAIN2 -> {
                         System.out.println("M2");
+                        server.BroadcastToDuelist("M2", MessageFormatter.MessageType.DECLARE);
                     }
                     case PHASE_END -> {
                         System.out.println("END");
+                        server.BroadcastToDuelist("END", MessageFormatter.MessageType.DECLARE);
                     }
                 }
                 return 1;
@@ -261,12 +276,13 @@ public class DuelClient {
             case MSG_DRAW -> {
                 int player = buffer.readInt8();
                 int count = buffer.readInt8();
+                WebSocket conn = SingleDuel.players[player].conn;
                 ClientCard pcard;
                 for (int i = 0; i < count; i++) {
                     int code = buffer.readInt32();
                     pcard = mainGame.dField.GetCard(player, LOCATION_DECK, mainGame.dField.deck[player].size() - 1 - i);
                     if (!mainGame.dField.deck_reversed || code != 0) {
-                        pcard.SetCode(code & 0x7fffffff, mainGame);
+                        pcard.SetCode(code & 0x7fffffff);
                     }
                 }
                 for (int i = 0; i < count; i++) {
@@ -283,6 +299,8 @@ public class DuelClient {
                 if (player == 0) {
                     System.out.println("我方抽了" + count + "张卡");
                 } else System.out.println("对方抽了" + count + "张卡");
+                // 通信
+                server.Broadcast(null, MessageFormatter.MessageType.GAME_MSG, null, "DRAW");
                 return 1;
             }
         }
@@ -323,7 +341,7 @@ public class DuelClient {
             p[i + 1] = buffer[i];
         }
         //TODO 事件触发-监听-响应
-//        NetServer.HandleCTOSPacket(YuSei, p, response_length);
+        NetServer.HandleCTOSPacket(duel_mode.pplayer[0], p, response_length);
     }
 
 }

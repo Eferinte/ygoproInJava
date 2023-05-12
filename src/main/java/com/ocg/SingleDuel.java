@@ -6,6 +6,8 @@ import com.ocg.core.OCGDll;
 import com.ocg.utils.BitReader;
 import com.ocg.utils.BitWriter;
 
+import java.util.Collections;
+
 import static com.ocg.Constants.*;
 
 public class SingleDuel extends DuelMode {
@@ -28,12 +30,11 @@ public class SingleDuel extends DuelMode {
 
     public String JoinGame(DuelPlayer dp) {
         dp.game = this;
-        if(players[0]==null) {
+        if (players[0] == null) {
             players[0] = dp;
             return "加入成功";
-        }
-        else if (players[1]==null) {
-            players[1]=dp;
+        } else if (players[1] == null) {
+            players[1] = dp;
             return "加入成功";
         }
         return "加入失败，房间人数已满";
@@ -42,17 +43,18 @@ public class SingleDuel extends DuelMode {
     public void StartDuel() {
         NetServer.SendBufferToPlayer(players[0], STOC_DUEL_START, 0, 0, null);
         NetServer.SendBufferToPlayer(players[1], STOC_DUEL_START, 0, 0, null);
-        for (int i = 0; i < 2; i++) {
-            byte[] deck_buffer = new byte[12];
-            BitWriter deck_writer = new BitWriter(deck_buffer, 0);
-            deck_writer.writeInt16(pdeck[i].main.size());
-            deck_writer.writeInt16(pdeck[i].extra.size());
-            deck_writer.writeInt16(pdeck[i].side.size());
-            deck_writer.writeInt16(pdeck[1 - i].main.size());
-            deck_writer.writeInt16(pdeck[1 - i].extra.size());
-            deck_writer.writeInt16(pdeck[1 - i].side.size());
-            NetServer.SendBufferToPlayer(players[i], STOC_DECK_COUNT, 0, 12, deck_buffer);
-        }
+//        for (int i = 0; i < 2; i++) {
+        byte[] deck_buffer = new byte[12];
+        BitWriter deck_writer = new BitWriter(deck_buffer, 0);
+        deck_writer.writeInt16(pdeck[0].main.size());
+        deck_writer.writeInt16(pdeck[0].extra.size());
+        deck_writer.writeInt16(pdeck[0].side.size());
+        deck_writer.writeInt16(pdeck[1].main.size());
+        deck_writer.writeInt16(pdeck[1].extra.size());
+        deck_writer.writeInt16(pdeck[1].side.size());
+        // TODO NetServer应当是负责将数据传输给两个客户端，但这里先转到本地
+        NetServer.SendBufferToPlayer(null, STOC_DECK_COUNT, 0, 12, deck_buffer);
+//        }
         NetServer.SendBufferToPlayer(players[0], STOC_SELECT_HAND, 0, 0, null);
         hand_result[0] = 0;
         hand_result[1] = 0;
@@ -116,7 +118,7 @@ public class SingleDuel extends DuelMode {
     void WaitForResponse(int playerId) {
         last_response = playerId;
         byte msg = MSG_WAITING;
-        NetServer.SendPacketToPlayer(players[1-playerId],STOC_GAME_MSG,msg);
+        NetServer.SendPacketToPlayer(players[1 - playerId], STOC_GAME_MSG, msg);
         System.out.println("wait for palyer" + playerId);
     }
 
@@ -209,8 +211,8 @@ public class SingleDuel extends DuelMode {
 
     public void UpdateDeck() {
         //LoadDeck
-        pdeck[0]=players[0].use_deck;
-        pdeck[1]=players[1].use_deck;
+        pdeck[0] = players[0].use_deck;
+        pdeck[1] = players[1].use_deck;
     }
 
     public void GetResponse(DuelPlayer dp, byte[] pdata, int len) {

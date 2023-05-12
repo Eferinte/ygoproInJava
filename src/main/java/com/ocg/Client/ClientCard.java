@@ -1,12 +1,15 @@
 package com.ocg.Client;
 
 import com.ocg.Game;
+import com.ocg.utils.BitReader;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.Vector;
 
-import static com.ocg.Constants.LOCATION_HAND;
+import static com.ocg.Constants.*;
+import static com.ocg.Main.mainGame;
 
 public class ClientCard {
     public boolean is_moving;
@@ -56,14 +59,17 @@ public class ClientCard {
     public Set<ClientCard> ownerTarget;
     public Map<Integer, Integer> counters;
     public Map<Integer, Integer> desc_hints;
-    public String[] atkstring = new String[16];
-    public String[] defstring = new String[16];
-    public String[] lvstring = new String[16];
-    public String[] linkstring = new String[16];
-    public String[] lscstring = new String[16];
-    public String[] rscstring = new String[16];
+    public String atkstring;
+    public String defstring;
+    public String lvstring;
+    public String linkstring;
+    public String lscstring;
+    public String rscstring;
+    // 新增属性
+    public String uuid;
 
     public ClientCard() {
+        uuid = UUID.randomUUID().toString();
         is_moving = false;
         is_fading = false;
         is_hovered = false;
@@ -96,18 +102,156 @@ public class ClientCard {
         position = 0;
         cHint = 0;
         chValue = 0;
-        atkstring[0] = "";
-        defstring[0] = "";
-        lvstring[0] = "";
-        linkstring[0] = "0";
-        rscstring[0] = "";
-        lscstring[0] = "";
+        atkstring = "";
+        defstring = "";
+        lvstring = "";
+        linkstring = "0";
+        rscstring = "";
+        lscstring = "";
         overlayTarget = null;
         equipTarget = null;
     }
 
-    public void SetCode(int code, Game mainGame) {
+    public void SetCode(int code) {
         if (location == LOCATION_HAND && this.code != code) mainGame.dField.MoveCard(this, 5);
         this.code = code;
+    }
+
+    public void UpdateInfo(byte[] buf) {
+        BitReader buffer = new BitReader(buf);
+        int flag = buffer.readInt32();
+        if (flag == 0) return;
+        int pdata;
+        if ((flag & QUERY_CODE) != 0) {
+            pdata = buffer.readInt32();
+            // TODO unsigned 必要吗?
+            if ((location == LOCATION_HAND) && (pdata != code)) {
+                code = pdata;
+                mainGame.dField.MoveCard(this, 5);
+            } else code = pdata;
+        }
+        if ((flag & QUERY_POSITION) != 0) {
+            pdata = (buffer.readInt32() >> 24) & 0xff;
+            // TODO (u8)?
+            if (((location & (LOCATION_EXTRA | LOCATION_REMOVED)) != 0) && (pdata != position)) {
+                position = pdata;
+                mainGame.dField.MoveCard(this, 1);
+            } else position = pdata;
+        }
+        if ((flag & QUERY_ALIAS) != 0) {
+            alias = buffer.readInt32();
+        }
+        if ((flag & QUERY_TYPE) != 0) {
+            type = buffer.readInt32();
+        }
+        if ((flag & QUERY_LEVEL) != 0) {
+            pdata = buffer.readInt32();
+            // TODO 此处unsigned必要吗
+            if (level != pdata) {
+                level = pdata;
+                lvstring = "L" + level;
+            }
+            alias = buffer.readInt32();
+        }
+        if ((flag & QUERY_RANK) != 0) {
+            pdata = buffer.readInt32();
+            if ((pdata != 0 && (rank != pdata))) {
+                rank = pdata;
+                lvstring = "R" + rank;
+            }
+        }
+        if ((flag & QUERY_ATTRIBUTE) != 0) {
+            attribute = buffer.readInt32();
+        }
+        if ((flag & QUERY_RACE) != 0) {
+            race = buffer.readInt32();
+        }
+        if ((flag & QUERY_ATTACK) != 0) {
+            attack = buffer.readInt32();
+            if (attack < 0) {
+                // TODO 待测试
+                atkstring = "?0";
+            } else atkstring = String.valueOf(attack);
+        }
+        if ((flag & QUERY_DEFENSE) != 0) {
+            defense = buffer.readInt32();
+            if ((type & TYPE_LINK) != 0) {
+                defstring = "-0";
+            } else if (defense < 0) {
+                defstring = "?0";
+            }
+            defstring = String.valueOf(defense);
+        }
+        if((flag & QUERY_BASE_ATTACK)!=0){
+            base_attack = buffer.readInt32();
+        }
+        if((flag & QUERY_BASE_DEFENSE)!=0){
+            base_defense = buffer.readInt32();
+        }
+        if((flag & QUERY_REASON)!=0){
+            buffer.step(4);
+        }
+        if((flag & QUERY_EQUIP_CARD)!=0){
+            int c = buffer.readInt8();
+            int l = buffer.readInt8();
+            int s = buffer.readInt8();
+            buffer.step();
+            ClientCard ecard = mainGame.dField.GetCard(mainGame.LocalPlayer(c),l,s);
+            equipTarget = ecard;
+            ecard.equipped.add(this);
+        }
+        if((flag & QUERY_TARGET_CARD)!=0){
+            int count = buffer.readInt32();
+            for(int i=0;i<count;i++){
+                int c = buffer.readInt8();
+                int l = buffer.readInt8();
+                int s = buffer.readInt8();
+                buffer.step();
+                ClientCard tcard = mainGame.dField.GetCard(mainGame.LocalPlayer(c),l,s);
+                cardTarget.add(tcard);
+                tcard.ownerTarget.add(this);
+
+            }
+        }
+        if((flag&QUERY_OVERLAY_CARD)!=0){
+            int count = buffer.readInt32();
+            for(int i=0;i<count;i++){
+                overlayed.get(i).SetCode(buffer.readInt32());
+            }
+        }
+        if((flag & QUERY_COUNTERS)!=0){
+            int count = buffer.readInt32();
+            for(int i=0;i<count;i++){
+                int ctype = buffer.readInt16();
+                int ccount = buffer.readInt16();
+                counters.put(ctype,ccount);
+            }
+        }
+        if((flag & QUERY_OWNER)!=0){
+            owner = buffer.readInt32();
+        }
+        if((flag & QUERY_STATUS)!=0){
+            status = buffer.readInt32();
+        }
+        if((flag & QUERY_LSCALE)!=0){
+            lscale = buffer.readInt32();
+            lscstring = String.valueOf(lscale);
+        }
+
+        if((flag & QUERY_RSCALE)!=0){
+            rscale = buffer.readInt32();
+            rscstring = String.valueOf(rscale);
+        }
+        if((flag & QUERY_LINK)!=0){
+            pdata = buffer.readInt32();
+            if(link != pdata){
+                link = pdata;
+            }
+            linkstring = "L-"+link;
+            pdata = buffer.readInt32();
+            if(link_marker != pdata){
+                link_marker = pdata;
+            }
+        }
     }
 }

@@ -1,7 +1,9 @@
 package com.ocg.utils;
 
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.Arrays;
 
 public class BitReader {
     private byte[] buffer;
@@ -10,6 +12,9 @@ public class BitReader {
     public BitReader(byte[] buf, int _ptr) {
         buffer = buf;
         ptr = new MutateInt(_ptr);
+    }
+    public BitReader(byte[] buf) {
+        this(buf,0);
     }
 
     public int readUInt32() {
@@ -119,5 +124,13 @@ public class BitReader {
         int value = index.getValue();
         index.step();
         return (int) (buff[value]);
+    }
+
+    /**
+     * 获取buffer，从当前位置截取到尾部
+     * @return
+     */
+    public byte[] getBuffer(){
+        return Arrays.copyOf(buffer,ptr.getValue());
     }
 }

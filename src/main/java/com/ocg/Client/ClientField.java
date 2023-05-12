@@ -2,6 +2,7 @@ package com.ocg.Client;
 
 import com.ocg.ChainInfo;
 import com.ocg.dataController.DataManager;
+import com.ocg.utils.BitReader;
 
 import java.util.*;
 
@@ -109,6 +110,7 @@ public class ClientField {
             szone[p].setSize(8);
             deck[p]=new Vector<>();
             hand[p]=new Vector<>();
+            extra[p] = new Vector<>();
         }
     }
 
@@ -131,7 +133,7 @@ public class ClientField {
             pcard.location = LOCATION_EXTRA;
             pcard.sequence = i;
             pcard.position = POS_FACEDOWN_DEFENSE;
-            deck[player].add(pcard);
+            extra[player].add(pcard);
             GetCardLocation(pcard);
         }
     }
@@ -310,6 +312,40 @@ public class ClientField {
     public void showMenu(){}
     public  void ClearCommandFlag(){
 
+    }
+    public void UpdateFieldCard(int controller,int location,byte[] data){
+        Vector<ClientCard> list = null;
+        switch (location){
+            case LOCATION_DECK -> {
+                list = deck[controller];
+            }
+            case LOCATION_HAND -> {
+                list = hand[controller];
+            }
+            case LOCATION_MZONE -> {
+                list = mzone[controller];
+            }
+            case LOCATION_SZONE -> {
+                list = szone[controller];
+            }
+            case LOCATION_GRAVE -> {
+                list = grave[controller];
+            }
+            case LOCATION_REMOVED -> {
+                list = remove[controller];
+            }
+            case LOCATION_EXTRA -> {
+                list = extra[controller];
+            }
+        }
+        if(list==null) return ;
+        int len;
+        BitReader buffer = new BitReader(data,0);
+        for(ClientCard card :list){
+            len = buffer.readInt32();
+            if(len > 8) card.UpdateInfo(data);
+            buffer.step(len-4);
+        }
     }
 
 }

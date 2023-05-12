@@ -403,6 +403,29 @@ public interface Constants {
     public static final int BUTTON_BIG_CARD_ZOOM_IN = 381;
     public static final int BUTTON_BIG_CARD_ZOOM_OUT = 382;
     public static final int BUTTON_BIG_CARD_ORIG_SIZE = 383;
-
+    // query list
+    public static final int QUERY_CODE = 0x1;
+    public static final int QUERY_POSITION = 0x2;
+    public static final int QUERY_ALIAS = 0x4;
+    public static final int QUERY_TYPE = 0x8;
+    public static final int QUERY_LEVEL = 0x10;
+    public static final int QUERY_RANK = 0x20;
+    public static final int QUERY_ATTRIBUTE = 0x40;
+    public static final int QUERY_RACE = 0x80;
+    public static final int QUERY_ATTACK = 0x100;
+    public static final int QUERY_DEFENSE = 0x200;
+    public static final int QUERY_BASE_ATTACK = 0x400;
+    public static final int QUERY_BASE_DEFENSE = 0x800;
+    public static final int QUERY_REASON = 0x1000;
+    public static final int QUERY_REASON_CARD = 0x2000;
+    public static final int QUERY_EQUIP_CARD = 0x4000;
+    public static final int QUERY_TARGET_CARD = 0x8000;
+    public static final int QUERY_OVERLAY_CARD = 0x10000;
+    public static final int QUERY_COUNTERS = 0x20000;
+    public static final int QUERY_OWNER = 0x40000;
+    public static final int QUERY_STATUS = 0x80000;
+    public static final int QUERY_LSCALE = 0x200000;
+    public static final int QUERY_RSCALE = 0x400000;
+    public static final int QUERY_LINK = 0x800000;
 
 }

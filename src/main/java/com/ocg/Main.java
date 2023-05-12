@@ -2,46 +2,31 @@ package com.ocg;
 
 
 import com.ocg.Client.DuelClient;
-import com.ocg.Server.SimpleServer;
+import com.ocg.Client.EventHandler;
+import com.ocg.Server.SimpleWebSocketServer;
 import com.ocg.core.OCGDll;
 import com.ocg.dataController.DataManager;
-import com.sun.jna.Memory;
-import com.sun.jna.Pointer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import com.sun.net.httpserver.HttpServer;
 
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.Date;
 
 public class Main {
 
     public static Game mainGame;
-    public static DuelPlayer YuSei;
-    static DuelPlayer Jack;
     static int menu_card = 2; //TODO ClientCard
     public static SingleDuel duel_mode ;
+    public static SimpleWebSocketServer server;
 
     public static void main(String[] args) throws Exception {
 
         if (81 == OCGDll.INSTANCE.jna_test_multi(9, 9)) System.out.println("JNA 连接成功");
-        System.out.println("Hello YGO!");
         mainGame = new Game();
         DataManager dm = new DataManager();
 
         duel_mode = new SingleDuel(false);
-//        YuSei.LoadDefault();
-//        Jack.LoadDefault();
-
-//        duel_mode.UpdateDeck(YuSei);
-//        duel_mode.UpdateDeck(Jack);
-//        duel_mode.StartDuel();
-//        duel_mode.TPResult();
-        // 开启服务
-        SimpleServer.RunSocketServer(mainGame,duel_mode);
+        server = new SimpleWebSocketServer(9999,mainGame,duel_mode);
+        server.start();
     }
 
     static class MyHandler implements HttpHandler {
