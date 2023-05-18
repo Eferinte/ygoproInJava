@@ -5,7 +5,11 @@ import com.ocg.core.CallbackImpls.MessageHandleImpl;
 import com.ocg.core.OCGDll;
 import com.ocg.utils.BitReader;
 import com.ocg.utils.BitWriter;
+import com.ocg.utils.MutateInt;
 
+import java.lang.reflect.Array;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 
 import static com.ocg.Constants.*;
@@ -142,11 +146,11 @@ public class SingleDuel extends DuelMode {
                     player = buffer.readInt8();
                     buffer.readInt32();
                     switch (type) {
-                        case 5 -> { // 发给自己
+                        case 1, 2, 3, 5 -> { // 发给自己
                             NetServer.SendBufferToPlayer(players[player], STOC_GAME_MSG, offset, buffer.getPosition() - offset);
                             break;
                         }
-                        case 11 -> { // 发给其他人
+                        case 4, 6, 7, 8, 9, 11 -> { // 发给其他人
                             NetServer.SendBufferToPlayer(players[1 - player], STOC_GAME_MSG, offset, buffer.getPosition() - offset);
                             break;
                         }
@@ -168,9 +172,11 @@ public class SingleDuel extends DuelMode {
                     count = buffer.readInt8();
                     buffer.step(count * 7);
                     count = buffer.readInt8();
-                    count = buffer.readInt8();
+                    buffer.step(count * 7);
                     count = buffer.readInt8();
                     buffer.step(count * 11 + 3);
+                    // TODO refresh
+                    RefreshHand(0);
                     WaitForResponse(player);
                     NetServer.SendBufferToPlayer(players[player], (byte) 1, offset, buffer.getPosition() - offset, msgbuffer);
                     return 1;
@@ -224,6 +230,74 @@ public class SingleDuel extends DuelMode {
         players[dp.type].state = (byte) 0xff;
         //TODO timelimit
         Process();
+    }
+
+    @Override
+    public void RefreshMzone(int player, int flag, int use_cache) {
+    }
+
+    @Override
+    public void RefreshSzone(int player, int flag, int use_cache) {
+
+    }
+
+    @Override
+    public void RefreshHand(int player, int flag, int use_cache) {
+        byte[] core_query_buffer = new byte[0x1997];
+        int len = OCGDll.INSTANCE.query_field_card(pduel, player, LOCATION_HAND, flag | QUERY_POSITION, core_query_buffer, use_cache);
+        ByteBuffer query_buffer = ByteBuffer.allocate(0x2000);
+        query_buffer.put((byte) MSG_UPDATE_DATA);
+        query_buffer.put((byte) player);
+        query_buffer.put(LOCATION_HAND);
+        query_buffer.put(core_query_buffer);
+        NetServer.SendBufferToPlayer(players[player], STOC_GAME_MSG, 0, len + 3, query_buffer.array());
+        MutateInt qlen = new MutateInt();
+        while (qlen.getValue() < len) {
+            int slen = BitReader.ReadInt32(core_query_buffer, qlen);
+        }
+    }
+
+    public void RefreshHand(int player) {
+        byte[] query_buffer = new byte[0x2000];
+        byte[] core_query_buffer = new byte[0x1997];
+        int len = OCGDll.INSTANCE.query_field_card(pduel, player, LOCATION_HAND, 0 | QUERY_POSITION | QUERY_CODE, core_query_buffer, 0);
+        query_buffer[0] = MSG_UPDATE_DATA;
+        query_buffer[1] = (byte) player;
+        query_buffer[2] = LOCATION_HAND;
+        // 复制core_buffer到buffer中
+        for (int i = 0; i < len; i++) {
+            query_buffer[i + 3] = core_query_buffer[0];
+        }
+        NetServer.SendBufferToPlayer(players[player], STOC_GAME_MSG, 0, len + 3, query_buffer);
+        MutateInt qlen = new MutateInt();
+        // 将不可视的card数据置空
+        while (qlen.getValue() < len) {
+            int slen = BitReader.ReadInt32(core_query_buffer, qlen);
+            int qflag = BitReader.ReadInt32(core_query_buffer, qlen);
+            if ((qflag & QUERY_CODE) != 0) {
+                qlen.step(4);
+            }
+            int position = (BitReader.ReadInt32(core_query_buffer, qlen) >> 24) & 0xff;
+            if ((position & POS_FACEUP) == 0) {
+                Arrays.fill(core_query_buffer, 3, slen, (byte) 0);
+            }
+            qlen.set(slen);
+        }
+        // 复制core_buffer到buffer中
+        for (int i = 0; i < len; i++) {
+            query_buffer[i + 3] = core_query_buffer[0];
+        }
+        NetServer.SendBufferToPlayer(players[1 - player], STOC_GAME_MSG, 0, len + 3, query_buffer);
+    }
+
+    @Override
+    public void RefreshGrave(int player, int flag, int use_cache) {
+
+    }
+
+    @Override
+    public void RefreshExtra(int player, int flag, int use_cache) {
+
     }
 
 

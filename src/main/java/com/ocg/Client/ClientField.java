@@ -343,7 +343,7 @@ public class ClientField {
         BitReader buffer = new BitReader(data,0);
         for(ClientCard card :list){
             len = buffer.readInt32();
-            if(len > 8) card.UpdateInfo(data);
+            if(len > 8) card.UpdateInfo(buffer.getBuffer());
             buffer.step(len-4);
         }
     }

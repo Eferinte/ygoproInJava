@@ -28,42 +28,4 @@ public class Main {
         server = new SimpleWebSocketServer(9999,mainGame,duel_mode);
         server.start();
     }
-
-    static class MyHandler implements HttpHandler {
-        public void handle(HttpExchange t) throws IOException {
-//            String response ;
-            String response = "???";
-            t.sendResponseHeaders(200,response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
-            System.out.println("try summon ");
-            for(int i=0;i<mainGame.dField.summonable_cards.size();i++){
-                if(i==menu_card){
-                    DuelClient.SetResponseI(i<<16);
-                    DuelClient.SendResponse();//TODO curMsg赋值
-                    break;
-                }
-            }
-        }
-    }
-    static class HandleCheckGame implements HttpHandler {
-        public void handle(HttpExchange t) throws IOException {
-            String response = "summon success";
-
-            t.sendResponseHeaders(200,response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
-            System.out.println("try summon ");
-            for(int i=0;i<mainGame.dField.summonable_cards.size();i++){
-                if(i==menu_card){
-                    DuelClient.SetResponseI(i<<16);
-                    DuelClient.SendResponse();//TODO curMsg赋值
-                    break;
-                }
-            }
-        }
-    }
-
 }

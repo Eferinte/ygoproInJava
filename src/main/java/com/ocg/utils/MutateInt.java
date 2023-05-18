@@ -1,5 +1,8 @@
 package com.ocg.utils;
 
+/**
+ * 模拟c++的指针滑动
+ */
 public class MutateInt {
     private int origin;
     private int value;
@@ -21,9 +24,8 @@ public class MutateInt {
     public void reset(){
         value = origin;
     }
-    public void reset(int num){
+    public void set(int num){
         value = num;
-        origin = num;
     }
 
     public int getValue() {

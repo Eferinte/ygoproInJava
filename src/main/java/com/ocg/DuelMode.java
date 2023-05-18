@@ -11,5 +11,10 @@ public abstract class DuelMode {
     public abstract void UpdateDeck();
     public abstract void StartDuel();
     public abstract void TPResult();
+    public abstract void RefreshMzone(int player,int flag,int use_cache);
+    public abstract void RefreshSzone(int player,int flag,int use_cache);
+    public abstract void RefreshHand(int player,int flag,int use_cache);
+    public abstract void RefreshGrave(int player,int flag,int use_cache);
+    public abstract void RefreshExtra(int player,int flag,int use_cache);
 
 }

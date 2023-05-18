@@ -7,6 +7,7 @@ import com.ocg.DuelMode;
 import com.ocg.DuelPlayer;
 import com.ocg.Game;
 import com.ocg.SingleDuel;
+import com.ocg.core.OCGDll;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -16,6 +17,9 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArraySet;
+
+import static com.ocg.Constants.LOCATION_HAND;
+import static com.ocg.Constants.LOCATION_MZONE;
 
 
 public class SimpleWebSocketServer extends WebSocketServer {
@@ -187,6 +191,13 @@ public class SimpleWebSocketServer extends WebSocketServer {
                             }
                         }
                     }
+                    case "QUERY"->{
+                        byte[] buffer = new byte[0x2000];
+                        int nums =  OCGDll.INSTANCE.query_field_card(pduel,0,LOCATION_HAND,0x1,buffer,0);
+                        mainGame.dField.UpdateFieldCard(0,LOCATION_HAND,buffer);
+                        System.out.println("手牌数="+nums);
+                    }
+
                 }
             }
             case STATE -> {

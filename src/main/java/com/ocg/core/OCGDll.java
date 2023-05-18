@@ -53,5 +53,6 @@ public interface OCGDll extends Library {
 
     void get_log_message(long pduel, Pointer buf);
     int query_card(long pduel,int playerid,int location, int sequence, int query_flag, byte[]buf, int use_cache);
+    int query_field_card(long pduel,int playerid,int location, int query_flag, byte[]buf, int use_cache);
     void set_responseb(long pduel,byte[]buf);
 }

@@ -13,12 +13,19 @@ public class NetServer {
     static int last_sent =0;
 
     // 暂时使用参数传递length代替添加长度头,
+
+    /**
+     * 原工程中将消息长度写入buffer供libevent库解析消息长度，此处无必要
+     * @param dp
+     * @param proto
+     * @param offset
+     * @param length
+     * @param buffer
+     */
     public static void SendBufferToPlayer(DuelPlayer dp, byte proto, int offset, int length, byte[] buffer) {
         byte[] packet = net_server_write;
         packet[0] = proto;
-        for (int i = 0; i < length; i++) {
-            packet[i + 1] = buffer[i];
-        }
+        if (length > 0) System.arraycopy(buffer, 0, packet, 1, length);
         DuelClient.HandleSTOCPacketLan(packet, length);
     }
     //TODO 先不泛化

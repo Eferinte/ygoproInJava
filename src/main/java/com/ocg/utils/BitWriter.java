@@ -8,6 +8,10 @@ public class BitWriter {
         this.buffer = buffer;
         ptr = new MutateInt(offset);
     }
+    public BitWriter(int size, int offset) {
+        this.buffer = new byte[size];
+        ptr = new MutateInt(offset);
+    }
 
     public void writeInt8(int value) {
         buffer[ptr.getValue()] = (byte)(value);
@@ -30,5 +34,8 @@ public class BitWriter {
             buffer[ptr.getValue() + 3 - i] = Byte;
         }
         ptr.step(4);
+    }
+    public byte[] getBuffer(){
+        return buffer;
     }
 }

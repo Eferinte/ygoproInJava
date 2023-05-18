@@ -131,6 +131,6 @@ public class BitReader {
      * @return
      */
     public byte[] getBuffer(){
-        return Arrays.copyOf(buffer,ptr.getValue());
+        return Arrays.copyOfRange(buffer,ptr.getValue(),buffer.length);
     }
 }
