@@ -1,7 +1,6 @@
 package com.ocg.Server;
 
 import com.google.gson.Gson;
-import com.ocg.Client.ClientCard;
 import com.ocg.Client.DuelClient;
 import com.ocg.DuelMode;
 import com.ocg.DuelPlayer;
@@ -19,7 +18,6 @@ import java.util.Vector;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import static com.ocg.Constants.LOCATION_HAND;
-import static com.ocg.Constants.LOCATION_MZONE;
 
 
 public class SimpleWebSocketServer extends WebSocketServer {
@@ -185,7 +183,7 @@ public class SimpleWebSocketServer extends WebSocketServer {
                     case "SUMMON" -> {
                         for(int i=0;i<mainGame.dField.summonable_cards.size();i++){
                             if(mainGame.dField.summonable_cards.get(i).uuid.equals(formatMsg.data.toString())){
-                                mainGame.dField.ClearCommandFlag();
+                                mainGame.dField.clearCommandFlag();
                                 DuelClient.SetResponseI(i << 16);
                                 DuelClient.SendResponse();
                             }
@@ -194,7 +192,7 @@ public class SimpleWebSocketServer extends WebSocketServer {
                     case "QUERY"->{
                         byte[] buffer = new byte[0x2000];
                         int nums =  OCGDll.INSTANCE.query_field_card(pduel,0,LOCATION_HAND,0x1,buffer,0);
-                        mainGame.dField.UpdateFieldCard(0,LOCATION_HAND,buffer);
+                        mainGame.dField.updateFieldCard(0,LOCATION_HAND,buffer);
                         System.out.println("手牌数="+nums);
                     }
 

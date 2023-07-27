@@ -1,5 +1,6 @@
 package com.ocg.utils;
 
+
 public class BitWriter {
     private byte[] buffer;
     private MutateInt ptr;
@@ -34,6 +35,17 @@ public class BitWriter {
             buffer[ptr.getValue() + 3 - i] = Byte;
         }
         ptr.step(4);
+    }
+
+    public static void writeInt32(byte[] buffer, int value, int offset) throws BitException {
+        if(buffer.length < offset+4){
+            throw new BitException("out of index");
+        }
+        for (int i = 0; i < 4; i++) {
+            byte Byte = (byte) (value & 0xff);
+            value = value >> 8;
+            buffer[offset + i] = Byte;
+        }
     }
     public byte[] getBuffer(){
         return buffer;

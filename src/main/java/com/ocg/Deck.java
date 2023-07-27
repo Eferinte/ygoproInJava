@@ -2,7 +2,6 @@ package com.ocg;
 
 import com.ocg.dataController.CardDataC;
 import com.ocg.dataController.DataManager;
-import com.ocg.dataController.DeckReader;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,9 +17,10 @@ class DataCardPair{
 }
 
 public class Deck {
-    public Vector<Integer> main_code;
-    public Vector<Integer> extra_code;
-    public Vector<Integer> side_code;
+
+    private Vector<Integer> main_code;
+    private Vector<Integer> extra_code;
+    private Vector<Integer> side_code;
     public Vector<DataCardPair> main;
     public Vector<DataCardPair> extra;
     public Vector<DataCardPair> side;
@@ -32,19 +32,42 @@ public class Deck {
     void clear() {
 
     }
+    public Vector<Integer> getMain_code() {
+        return main_code;
+    }
+
+    public void setMain_code(Vector<Integer> main_code) {
+        this.main_code = main_code;
+    }
+
+    public Vector<Integer> getExtra_code() {
+        return extra_code;
+    }
+
+    public void setExtra_code(Vector<Integer> extra_code) {
+        this.extra_code = extra_code;
+    }
+
+    public Vector<Integer> getSide_code() {
+        return side_code;
+    }
+
+    public void setSide_code(Vector<Integer> side_code) {
+        this.side_code = side_code;
+    }
 
     public void LoadCardData() {
         main = new Vector<>();
         extra = new Vector<>();
         side = new Vector<>();
         for (int i = 0; i < main_code.size(); i++) {
-            main.add(new DataCardPair(main_code.get(i),DataManager.GetData(main_code.get(i))));
+            main.add(new DataCardPair(main_code.get(i),DataManager.getData(main_code.get(i))));
         }
         for (int i = 0; i < extra_code.size(); i++) {
-            extra.add(new DataCardPair(extra_code.get(i),DataManager.GetData(extra_code.get(i))));
+            extra.add(new DataCardPair(extra_code.get(i),DataManager.getData(extra_code.get(i))));
         }
         for (int i = 0; i < side_code.size(); i++) {
-            side.add(new DataCardPair(side_code.get(i),DataManager.GetData(side_code.get(i))));
+            side.add(new DataCardPair(side_code.get(i),DataManager.getData(side_code.get(i))));
         }
     }
 
@@ -62,7 +85,7 @@ public class Deck {
             }
         }
         for (int key : main.keySet()) {
-            temp += DataManager.GetDesc(key).name + "×" + main.get(key) + "\n";
+            temp += DataManager.getCardDesc(key).name + "×" + main.get(key) + "\n";
         }
         temp += "\n额外(" + extra_code.size() + "张):\n";
         for (int it : extra_code) {
@@ -73,7 +96,7 @@ public class Deck {
             }
         }
         for (int key : extra.keySet()) {
-            temp += DataManager.GetDesc(key).name + "×" + extra.get(key) + "\n";
+            temp += DataManager.getCardDesc(key).name + "×" + extra.get(key) + "\n";
         }
         temp += "\n副卡组(" + side_code.size() + "张):\n";
         for (int it : side_code) {
@@ -84,7 +107,7 @@ public class Deck {
             }
         }
         for (int key : side.keySet()) {
-            temp += DataManager.GetDesc(key).name + "×" + side.get(key) + "\n";
+            temp += DataManager.getCardDesc(key).name + "×" + side.get(key) + "\n";
         }
         return temp;
     }

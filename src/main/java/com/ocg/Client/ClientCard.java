@@ -1,15 +1,14 @@
 package com.ocg.Client;
 
-import com.ocg.Game;
-import com.ocg.utils.BitReader;
+import com.ocg.dataController.DataManager;
+import com.ocg.utils.ConstantDict.Dictionary;
 
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.Vector;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.util.*;
 
 import static com.ocg.Constants.*;
-import static com.ocg.Main.mainGame;
+import static com.ocg.Moment.Client.LogicClient.mainGame;
 
 public class ClientCard {
     public boolean is_moving;
@@ -52,13 +51,13 @@ public class ClientCard {
     public int symbol;
     public int cmdFlag;
     public ClientCard overlayTarget;
-    public Vector<ClientCard> overlayed;
+    public Vector<ClientCard> overlayed = new Vector<>();
     public ClientCard equipTarget;
-    public Set<ClientCard> equipped;
-    public Set<ClientCard> cardTarget;
-    public Set<ClientCard> ownerTarget;
-    public Map<Integer, Integer> counters;
-    public Map<Integer, Integer> desc_hints;
+    public Set<ClientCard> equipped = new HashSet<>();
+    public Set<ClientCard> cardTarget = new HashSet<>();
+    public Set<ClientCard> ownerTarget = new HashSet<>();
+    public Map<Integer, Integer> counters = new HashMap<>();
+    public Map<Integer, Integer> desc_hints = new HashMap<>();
     public String atkstring;
     public String defstring;
     public String lvstring;
@@ -112,69 +111,67 @@ public class ClientCard {
         equipTarget = null;
     }
 
-    public void SetCode(int code) {
-        if (location == LOCATION_HAND && this.code != code) mainGame.dField.MoveCard(this, 5);
+    public void setCode(int code) {
+        if (location == LOCATION_HAND && this.code != code) mainGame.dField.moveCard(this, 5);
         this.code = code;
     }
 
-    public void UpdateInfo(byte[] buf) {
-        BitReader buffer = new BitReader(buf);
-        int flag = buffer.readInt32();
+    public void updateInfo(byte[] buf) {
+        ByteBuffer buffer = ByteBuffer.allocate(buf.length).order(ByteOrder.LITTLE_ENDIAN).put(buf).flip();
+        int flag = buffer.getInt();
         if (flag == 0) return;
         int pdata;
         if ((flag & QUERY_CODE) != 0) {
-            pdata = buffer.readInt32();
+            pdata = buffer.getInt();
             // TODO unsigned 必要吗?
             if ((location == LOCATION_HAND) && (pdata != code)) {
                 code = pdata;
-                mainGame.dField.MoveCard(this, 5);
+                mainGame.dField.moveCard(this, 5);
             } else code = pdata;
         }
         if ((flag & QUERY_POSITION) != 0) {
-            pdata = (buffer.readInt32() >> 24) & 0xff;
+            pdata = (buffer.getInt() >> 24) & 0xff;
             // TODO (u8)?
             if (((location & (LOCATION_EXTRA | LOCATION_REMOVED)) != 0) && (pdata != position)) {
                 position = pdata;
-                mainGame.dField.MoveCard(this, 1);
+                mainGame.dField.moveCard(this, 1);
             } else position = pdata;
         }
         if ((flag & QUERY_ALIAS) != 0) {
-            alias = buffer.readInt32();
+            alias = buffer.getInt();
         }
         if ((flag & QUERY_TYPE) != 0) {
-            type = buffer.readInt32();
+            type = buffer.getInt();
         }
         if ((flag & QUERY_LEVEL) != 0) {
-            pdata = buffer.readInt32();
-            // TODO 此处unsigned必要吗
+            pdata = buffer.getInt();
             if (level != pdata) {
                 level = pdata;
                 lvstring = "L" + level;
             }
-            alias = buffer.readInt32();
         }
         if ((flag & QUERY_RANK) != 0) {
-            pdata = buffer.readInt32();
+            pdata = buffer.getInt();
             if ((pdata != 0 && (rank != pdata))) {
                 rank = pdata;
                 lvstring = "R" + rank;
             }
         }
         if ((flag & QUERY_ATTRIBUTE) != 0) {
-            attribute = buffer.readInt32();
+            attribute = buffer.getInt();
         }
         if ((flag & QUERY_RACE) != 0) {
-            race = buffer.readInt32();
+            race = buffer.getInt();
         }
         if ((flag & QUERY_ATTACK) != 0) {
-            attack = buffer.readInt32();
+            attack = buffer.getInt();
             if (attack < 0) {
                 // TODO 待测试
                 atkstring = "?0";
             } else atkstring = String.valueOf(attack);
         }
         if ((flag & QUERY_DEFENSE) != 0) {
-            defense = buffer.readInt32();
+            defense = buffer.getInt();
             if ((type & TYPE_LINK) != 0) {
                 defstring = "-0";
             } else if (defense < 0) {
@@ -183,75 +180,94 @@ public class ClientCard {
             defstring = String.valueOf(defense);
         }
         if((flag & QUERY_BASE_ATTACK)!=0){
-            base_attack = buffer.readInt32();
+            base_attack = buffer.getInt();
         }
         if((flag & QUERY_BASE_DEFENSE)!=0){
-            base_defense = buffer.readInt32();
+            base_defense = buffer.getInt();
         }
         if((flag & QUERY_REASON)!=0){
-            buffer.step(4);
+            reason = buffer.getInt();
+        }
+        if((flag & QUERY_REASON_CARD)!=0){
+            buffer.getInt();
         }
         if((flag & QUERY_EQUIP_CARD)!=0){
-            int c = buffer.readInt8();
-            int l = buffer.readInt8();
-            int s = buffer.readInt8();
-            buffer.step();
-            ClientCard ecard = mainGame.dField.GetCard(mainGame.LocalPlayer(c),l,s);
+            int c = buffer.getInt();
+            int l = buffer.getInt();
+            int s = buffer.getInt();
+            buffer.get();
+            ClientCard ecard = mainGame.dField.getCard(mainGame.LocalPlayer(c),l,s);
             equipTarget = ecard;
             ecard.equipped.add(this);
         }
         if((flag & QUERY_TARGET_CARD)!=0){
-            int count = buffer.readInt32();
+            int count = buffer.getInt();
             for(int i=0;i<count;i++){
-                int c = buffer.readInt8();
-                int l = buffer.readInt8();
-                int s = buffer.readInt8();
-                buffer.step();
-                ClientCard tcard = mainGame.dField.GetCard(mainGame.LocalPlayer(c),l,s);
+                int c = buffer.getInt();
+                int l = buffer.getInt();
+                int s = buffer.getInt();
+                buffer.get();
+                ClientCard tcard = mainGame.dField.getCard(mainGame.LocalPlayer(c),l,s);
                 cardTarget.add(tcard);
                 tcard.ownerTarget.add(this);
 
             }
         }
         if((flag&QUERY_OVERLAY_CARD)!=0){
-            int count = buffer.readInt32();
+            int count = buffer.getInt();
             for(int i=0;i<count;i++){
-                overlayed.get(i).SetCode(buffer.readInt32());
+                overlayed.get(i).setCode(buffer.getInt());
             }
         }
         if((flag & QUERY_COUNTERS)!=0){
-            int count = buffer.readInt32();
+            int count = buffer.getInt();
             for(int i=0;i<count;i++){
-                int ctype = buffer.readInt16();
-                int ccount = buffer.readInt16();
+                int ctype = buffer.getInt();
+                int ccount = buffer.getInt();
                 counters.put(ctype,ccount);
             }
         }
         if((flag & QUERY_OWNER)!=0){
-            owner = buffer.readInt32();
+            owner = buffer.getInt();
         }
         if((flag & QUERY_STATUS)!=0){
-            status = buffer.readInt32();
+            status = buffer.getInt();
         }
         if((flag & QUERY_LSCALE)!=0){
-            lscale = buffer.readInt32();
+            lscale = buffer.getInt();
             lscstring = String.valueOf(lscale);
         }
-
         if((flag & QUERY_RSCALE)!=0){
-            rscale = buffer.readInt32();
+            rscale = buffer.getInt();
             rscstring = String.valueOf(rscale);
         }
         if((flag & QUERY_LINK)!=0){
-            pdata = buffer.readInt32();
+            pdata = buffer.getInt();
             if(link != pdata){
                 link = pdata;
             }
             linkstring = "L-"+link;
-            pdata = buffer.readInt32();
+            pdata = buffer.getInt();
             if(link_marker != pdata){
                 link_marker = pdata;
             }
         }
+    }
+    public void clearTarget(){
+        for(ClientCard clientCard:cardTarget){
+            clientCard.is_showtarget = false;
+            clientCard.ownerTarget.remove(this);
+        }
+        for(ClientCard clientCard:ownerTarget){
+            clientCard.is_showtarget = false;
+            clientCard.cardTarget.remove(this);
+        }
+        cardTarget.clear();
+        ownerTarget.clear();
+    }
+
+    @Override
+    public String toString() {
+        return String.valueOf(DataManager.getCardDesc(this.code)+"("+ Dictionary.getLocationDesc(location) +")");
     }
 }

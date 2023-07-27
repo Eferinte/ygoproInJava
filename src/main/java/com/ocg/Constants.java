@@ -8,6 +8,19 @@ public interface Constants {
     public static final byte DUEL_STAGE_SIDING = 4;
     public static final byte DUEL_STAGE_END = 5;
 
+    //Hints
+    public static final byte HINT_EVENT = 1;
+    public static final byte HINT_MESSAGE = 2;
+    public static final byte HINT_SELECTMSG = 3;
+    public static final byte HINT_OPSELECTED = 4;
+    public static final byte HINT_EFFECT = 5;
+    public static final byte HINT_RACE = 6;
+    public static final byte HINT_ATTRIB = 7;
+    public static final byte HINT_CODE = 8;
+    public static final byte HINT_NUMBER = 9;
+    public static final byte HINT_CARD = 10;
+    public static final byte HINT_ZONE = 11;
+
     public static final byte CTOS_RESPONSE = 0x1;
     public static final byte CTOS_UPDATE_DECK = 0x2;
     public static final byte CTOS_HAND_RESULT = 0x3;
@@ -19,6 +32,12 @@ public interface Constants {
     public static final byte CTOS_SURRENDER = 0x14;
     public static final byte CTOS_TIME_CONFIRM = 0x15;
     public static final byte CTOS_CHAT = 0x16;
+    public static final byte CTOS_HS_TODUELIST = 0x20;
+    public static final byte CTOS_HS_TOOBSERVER = 0x21;
+    public static final byte CTOS_HS_READY = 0x22;
+    public static final byte CTOS_HS_NOTREADY = 0x23;
+    public static final byte CTOS_HS_KICK = 0x24;
+    public static final byte CTOS_HS_START = 0x25;
 
 
     public static final byte STOC_GAME_MSG = 0x1;
@@ -45,6 +64,7 @@ public interface Constants {
 
 
     // Locations
+
     public static final byte LOCATION_DECK = 0x01;
     public static final byte LOCATION_HAND = 0x02;
     public static final byte LOCATION_MZONE = 0x04;

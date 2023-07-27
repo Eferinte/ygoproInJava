@@ -10,4 +10,9 @@ public class CardString {
         this.text = text;
         this.desc = desc;
     }
+
+    @Override
+    public String toString() {
+        return name;
+    }
 }

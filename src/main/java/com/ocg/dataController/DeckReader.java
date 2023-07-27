@@ -32,11 +32,11 @@ public class DeckReader {
                         tempV = new Vector<>();
                     }
                     case EXTRA_IDENTIFIER -> {
-                        deck.main_code = tempV;
+                        deck.setMain_code(tempV);
                         tempV = new Vector<>();
                     }
                     case SIDE_IDENTIFIER -> {
-                        deck.extra_code = tempV;
+                        deck.setExtra_code(tempV);
                         tempV = new Vector<>();
                     }
                     default -> {
@@ -47,7 +47,7 @@ public class DeckReader {
                 }
                 line++;
             }
-            deck.side_code = tempV;
+            deck.setSide_code(tempV);
             reader.close();
         } catch (IOException e) {
             e.printStackTrace();

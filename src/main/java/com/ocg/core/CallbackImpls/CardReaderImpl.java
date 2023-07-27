@@ -6,7 +6,7 @@ import com.ocg.dataController.DataManager;
 public class CardReaderImpl implements OCGDll.card_reader {
     @Override
     public int invoke(int code, card_data.ByReference pdata) {
-        if (!DataManager.GetDataForCore(code, pdata)) {
+        if (!DataManager.getDataForCore(code, pdata)) {
             pdata.code = 0;
             pdata.alias = 0;
             pdata.setcode = 0;

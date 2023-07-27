@@ -72,15 +72,15 @@ public class DuelClient {
                 int deckc = buffer.readInt16();
                 int extrac = buffer.readInt16();
                 int sidec = buffer.readInt16();
-                mainGame.dField.Initial(0, deckc, extrac);
+                mainGame.dField.initial(0, deckc, extrac);
                 deckc = buffer.readInt16();
                 extrac = buffer.readInt16();
                 sidec = buffer.readInt16();
-                mainGame.dField.Initial(1, deckc, extrac);
+                mainGame.dField.initial(1, deckc, extrac);
             }
             case STOC_DUEL_START -> {
                 mainGame.gMutex = true;
-                mainGame.dField.Clear();
+                mainGame.dField.clear();
                 mainGame.dInfo.isStarted = true;
                 mainGame.dInfo.isFinished = false;
                 mainGame.dInfo.lp[0] = 0;
@@ -105,7 +105,7 @@ public class DuelClient {
             case MSG_UPDATE_DATA -> {
                 int player = mainGame.LocalPlayer(buffer.readInt8());
                 int location = buffer.readInt8();
-                mainGame.dField.UpdateFieldCard(player,location,buffer.getBuffer());
+                mainGame.dField.updateFieldCard(player,location,buffer.getBuffer());
             }
             case MSG_SELECT_IDLECMD -> {
                 /**
@@ -121,7 +121,7 @@ public class DuelClient {
                     con = mainGame.LocalPlayer(buffer.readInt8());
                     loc = buffer.readInt8();
                     seq = buffer.readInt8();
-                    pcard = mainGame.dField.GetCard(con, loc, seq);
+                    pcard = mainGame.dField.getCard(con, loc, seq);
                     mainGame.dField.summonable_cards.add(pcard);
                     pcard.cmdFlag |= COMMAND_SUMMON;
                 }
@@ -132,11 +132,11 @@ public class DuelClient {
                     con = mainGame.LocalPlayer(buffer.readInt8());
                     loc = buffer.readInt8();
                     seq = buffer.readInt8();
-                    pcard = mainGame.dField.GetCard(con, loc, seq);
+                    pcard = mainGame.dField.getCard(con, loc, seq);
                     mainGame.dField.spsummonable_cards.add(pcard);
                     pcard.cmdFlag |= COMMAND_SPSUMMON;
                     if (pcard.location == LOCATION_DECK) {
-                        pcard.SetCode(code);
+                        pcard.setCode(code);
                         mainGame.dField.deck_act = true;
                     } else if (pcard.location == LOCATION_GRAVE) {
                         mainGame.dField.grave_act = true;
@@ -157,7 +157,7 @@ public class DuelClient {
                     con = mainGame.LocalPlayer(buffer.readInt8());
                     loc = buffer.readInt8();
                     seq = buffer.readInt8();
-                    pcard = mainGame.dField.GetCard(con, loc, seq);
+                    pcard = mainGame.dField.getCard(con, loc, seq);
                     mainGame.dField.reposable_cards.add(pcard);
                     pcard.cmdFlag |= COMMAND_REPOS;
                 }
@@ -168,7 +168,7 @@ public class DuelClient {
                     con = mainGame.LocalPlayer(buffer.readInt8());
                     loc = buffer.readInt8();
                     seq = buffer.readInt8();
-                    pcard = mainGame.dField.GetCard(con, loc, seq);
+                    pcard = mainGame.dField.getCard(con, loc, seq);
                     mainGame.dField.reposable_cards.add(pcard);
                     pcard.cmdFlag |= COMMAND_MSET;
                 }
@@ -179,7 +179,7 @@ public class DuelClient {
                     con = mainGame.LocalPlayer(buffer.readInt8());
                     loc = buffer.readInt8();
                     seq = buffer.readInt8();
-                    pcard = mainGame.dField.GetCard(con, loc, seq);
+                    pcard = mainGame.dField.getCard(con, loc, seq);
                     mainGame.dField.reposable_cards.add(pcard);
                     pcard.cmdFlag |= COMMAND_SSET;
                 }
@@ -193,7 +193,7 @@ public class DuelClient {
                     loc = buffer.readInt8();
                     seq = buffer.readInt8();
                     desc = buffer.readInt32();
-                    pcard = mainGame.dField.GetCard(con, loc, seq);
+                    pcard = mainGame.dField.getCard(con, loc, seq);
                     int flag = 0;
                     // TODO ???
                     if ((code & 0x80000000) != 0) {
@@ -280,19 +280,19 @@ public class DuelClient {
                 ClientCard pcard;
                 for (int i = 0; i < count; i++) {
                     int code = buffer.readInt32();
-                    pcard = mainGame.dField.GetCard(player, LOCATION_DECK, mainGame.dField.deck[player].size() - 1 - i);
+                    pcard = mainGame.dField.getCard(player, LOCATION_DECK, mainGame.dField.deck[player].size() - 1 - i);
                     if (!mainGame.dField.deck_reversed || code != 0) {
-                        pcard.SetCode(code & 0x7fffffff);
+                        pcard.setCode(code & 0x7fffffff);
                     }
                 }
                 for (int i = 0; i < count; i++) {
                     mainGame.gMutex = true;
-                    pcard = mainGame.dField.GetCard(player, LOCATION_DECK, mainGame.dField.deck[player].size() - 1);
+                    pcard = mainGame.dField.getCard(player, LOCATION_DECK, mainGame.dField.deck[player].size() - 1);
                     mainGame.dField.deck[player].remove(mainGame.dField.deck[player].size() - 1);
-                    mainGame.dField.AddCard(pcard, player, LOCATION_HAND, 0);
+                    mainGame.dField.addCard(pcard, player, LOCATION_HAND, 0);
 //                    ???
 //                    for (int j=0;j<mainGame.dField.hand[player].size();j++){
-                    mainGame.dField.MoveCard(mainGame.dField.hand[player].get(i), 10);
+                    mainGame.dField.moveCard(mainGame.dField.hand[player].get(i), 10);
 //                    }
                     mainGame.gMutex = false;
                 }
@@ -316,7 +316,7 @@ public class DuelClient {
     public static void SendResponse() {
         switch (mainGame.dInfo.curMsg) {
             case MSG_SELECT_IDLECMD -> {
-                mainGame.dField.ClearCommandFlag();
+                mainGame.dField.clearCommandFlag();
                 // 隐藏cmd按钮
                 break;
             }
@@ -342,6 +342,9 @@ public class DuelClient {
         }
         //TODO 事件触发-监听-响应
         NetServer.HandleCTOSPacket(duel_mode.pplayer[0], p, response_length);
+    }
+    public void StartClient(int ip,short port,boolean create_game){
+        
     }
 
 }

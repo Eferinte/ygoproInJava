@@ -1,19 +1,23 @@
-import com.google.gson.Gson;
-import com.ocg.Client.ClientCard;
-import org.java_websocket.WebSocket;
+import InterfaceImpls.MultiThread;
+import InterfaceImpls.MyClient;
+import InterfaceImpls.MyNetwork;
+import com.ocg.Moment.Client.LogicClient;
+import com.ocg.Moment.Moment;
+import com.ocg.dataController.DataManager;
+import com.ocg.utils.ConstantDict.Dictionary;
 
-import java.util.Vector;
+import java.io.IOException;
 
 public class test {
-    public class Test {
-        public String name;
-        public WebSocket conn;
-        public Test(String name,WebSocket conn){
-            this.name = name;
-            this.conn = conn;
-        }
-    }
-    public static void main(String[] args) {
-        Gson JSON = new Gson();
+    public static void main(String[] args) throws IOException {
+        Dictionary.load();
+        DataManager dm = new DataManager();
+        Moment moment = new Moment(MyClient.class, MyNetwork.class);
+        LogicClient client = moment.newClient("Eferinte");
+        client.join233("NS#MOMENT");
+        client.ready();
+//        MultiThread multiThread = new MultiThread();
+//        multiThread.startListener();
+//        multiThread.run();
     }
 }

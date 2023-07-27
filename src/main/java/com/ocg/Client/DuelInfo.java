@@ -21,7 +21,7 @@ public class DuelInfo {
     public String clientname_tag;
     public String[] strLP = new String[2];
     public char player_type;
-    public char time_player;
+    public int time_player;
     public short time_limit;
     public short[] time_left = new short[2];
     public boolean isReplaySwapped;
