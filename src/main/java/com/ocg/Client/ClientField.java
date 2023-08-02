@@ -514,9 +514,9 @@ public class ClientField {
     }
     public void setResponseSelectedCards(){
         byte[] respBuf = new byte[64];
-        respBuf[0] = (byte)selectable_cards.size();
-        for(int i=0;i< selectable_cards.size();i++){
-            respBuf[i+1] = (byte)selectable_cards.get(i).select_seq;
+        respBuf[0] = (byte)selected_cards.size();
+        for(int i=0;i< selected_cards.size();i++){
+            respBuf[i+1] = (byte)selected_cards.get(i).select_seq;
         }
         LogicClient.setResponseB(respBuf,selected_cards.size()+1);
     }

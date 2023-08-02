@@ -1,6 +1,7 @@
 package com.ocg.Moment.Client;
 
 
+import com.ocg.ChainInfo;
 import com.ocg.Client.ClientCard;
 import com.ocg.Client.Zone;
 import com.ocg.Deck;
@@ -222,6 +223,9 @@ public class LogicClient {
         }
         clientMove.log("[LOG]-curMsg=" + curMsg);
         switch (curMsg) {
+            case MSG_RETRY ->{
+                clientMove.log("Try again");
+            }
             case MSG_HINT -> {
                 int type = pktData.get();
                 int player = pktData.get();
@@ -416,7 +420,24 @@ public class LogicClient {
                     // TODO 允许洗切手卡
                 } else {
                 }
+                clientMove.log("请选择操作");
 
+            }
+            case MSG_SELECT_YESNO -> {
+                pktData.get();
+                int desc = pktData.getInt();
+                mainGame.dField.highlighting_card = null;
+                clientMove.log(DataManager.getDesc(desc));
+                SelectOption ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {{
+                    add("否");
+                    add("是");
+                }}));
+                setResponseI(ans.value);
+                try {
+                    sendResponse();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
             case MSG_SELECT_CARD -> {
                 pktData.get();// player
@@ -456,22 +477,25 @@ public class LogicClient {
                 select_hint = 0;
                 // 选择
                 // TODO 接口化到client中
-                for (int i = 0; i < count; i++) {
+                while (mainGame.dField.selected_cards.size() < mainGame.dField.select_max) {
                     ArrayList<String> arrayList = Convertor.getStringList(mainGame.dField.selectable_cards, (cards) -> {
                         if (cards.is_selected) return false;
                         return true;
                     });
                     SelectOption ans = clientMove.select(SelectOption.getOptions(arrayList));
                     mainGame.dField.selected_cards.add(mainGame.dField.selectable_cards.get(ans.value));
-                    if (mainGame.dField.selected_cards.size() >= mainGame.dField.select_max) {
-                        mainGame.dField.setResponseSelectedCards();
-                        try {
-                            sendResponse();
-                            return;
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
+                    if (mainGame.dField.selected_cards.size() >= mainGame.dField.select_min && mainGame.dField.select_min!=mainGame.dField.select_max) {
+                        clientMove.log("已满足最小选择，是否确定？");
+                        ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>(){{add("结束选择");add("继续");}}));
+                        if(ans.value ==0) break;
                     }
+                }
+                mainGame.dField.setResponseSelectedCards();
+                try {
+                    sendResponse();
+                    return;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
             }
             case MSG_SELECT_CHAIN -> {
@@ -631,6 +655,58 @@ public class LogicClient {
                     throw new RuntimeException(e);
                 }
 
+            }
+            case MSG_SELECT_UNSELECT_CARD ->{
+
+            }
+            case MSG_CONFIRM_DECKTOP -> {
+                int player = mainGame.LocalPlayer((int) pktData.get());
+                int count = pktData.get();
+                int code;
+                ClientCard pCard;
+                mainGame.dField.selectable_cards.clear();
+                ArrayList<ClientCard> deck = mainGame.dField.deck[player];
+                clientMove.log(DataManager.getDesc(207).toString() + count);
+                for (int i = 0; i < count; i++) {
+                    code = pktData.getInt();
+                    pktData.get();
+                    pktData.get();
+                    pktData.get();
+                    pCard = deck.get(deck.size() - i-1);
+                    if (code != 0) {
+                        pCard.setCode(code);
+                        clientMove.log(DataManager.getCardDesc(code).name);
+                    }
+                }
+            }
+            case MSG_CONFIRM_CARDS->{
+                pktData.get();
+                int count = pktData.get();
+                int code,c,l,s;
+                ArrayList<ClientCard> field_confirm;
+                ArrayList<ClientCard> panel_confirm;
+                ClientCard pCard;
+                clientMove.log(DataManager.getSysString(208)+count);
+                for(int i=0;i<count;i++){
+                    code = pktData.getInt();
+                    c = mainGame.LocalPlayer(pktData.get());
+                    l = pktData.get();
+                    s = pktData.get();
+                    pCard = mainGame.dField.getCard(c,l,s);
+                    if(code !=0){
+                        pCard.setCode(code);
+                    }
+                    clientMove.log(DataManager.getCardDesc(code).name);
+                }
+            }
+            case MSG_SHUFFLE_DECK->{
+                int player = pktData.get();
+                clientMove.log("洗切卡组");
+            }
+            case MSG_SHUFFLE_HAND->{
+                int player = pktData.get();
+                int count = pktData.get();
+                clientMove.log("洗切手卡");
             }
             case MSG_NEW_TURN -> {
                 clientMove.log("Turn-" + mainGame.dInfo.turn);
@@ -799,22 +875,33 @@ public class LogicClient {
 
             }
             case MSG_CHAINED -> {
-                //TODO 连锁
+                int ct = pktData.get();
+                clientMove.log(DataManager.getSysString(1609) + DataManager.getCardDesc(mainGame.dField.current_chain.code).toString());
+                mainGame.dField.chains.add(mainGame.dField.current_chain);
             }
             case MSG_CHAIN_SOLVING -> {
-
+                int ct = pktData.get();
+                if (mainGame.dField.chains.size() > 1) {
+                    mainGame.dField.chains.get(ct - 1).solved = true;
+                    clientMove.log("连锁结算");
+                }
+                mainGame.dField.last_chain = false;
             }
             case MSG_CHAIN_SOLVED -> {
-
+                pktData.get();
             }
             case MSG_CHAIN_END -> {
-
+                for (ChainInfo chain : mainGame.dField.chains) {
+                    for (ClientCard card : chain.target) {
+                        card.is_showchaintarget = false;
+                    }
+                    chain.chain_card.is_showchaintarget = false;
+                }
+                mainGame.dField.chains.clear();
             }
-            case MSG_CHAIN_NEGATED -> {
-
-            }
-            case MSG_CHAIN_DISABLED -> {
-
+            case MSG_CHAIN_NEGATED, MSG_CHAIN_DISABLED -> {
+                int ct = pktData.get();
+                clientMove.log("连锁失效" + DataManager.getData(mainGame.dField.chains.get(ct - 1).code));
             }
             case MSG_DRAW -> {
                 int player = mainGame.LocalPlayer(pktData.get());
@@ -882,3 +969,4 @@ public class LogicClient {
     }
 
 }
+// TODO NEXT 空域点01不响应

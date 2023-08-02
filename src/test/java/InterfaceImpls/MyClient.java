@@ -6,13 +6,23 @@ import com.ocg.Moment.Client.LogicClient;
 import com.ocg.Moment.Client.SelectOption;
 import com.ocg.Moment.InputInterface.InputInterface;
 import com.ocg.Moment.OutputInterface.OutputInterface;
+import com.ocg.utils.ConstantDict.Dictionary;
+import com.ocg.utils.ConstantDict.EnumStruct;
+import com.ocg.utils.ConstantDict.LOCATION;
+import com.ocg.utils.Convertor;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static com.ocg.Constants.*;
+import static com.ocg.utils.ConstantDict.Dictionary.locationMap;
 
 public class MyClient implements ClientInterface {
     LogicClient logicClient;
@@ -87,27 +97,30 @@ public class MyClient implements ClientInterface {
                         }
                     }
                     // 查询可进行的操作
-                    case "queryAction" -> {
+                    case "queryAct" -> {
                         StringBuilder actions = new StringBuilder("可进行的操作：\n");
                         if (LogicClient.mainGame.dField.summonable_cards.size() != 0) {
                             actions.append("通常召唤-summon\n");
                         }
                         if (LogicClient.mainGame.dField.msetable_cards.size() != 0) {
-                            actions.append("盖放怪兽-setMonster\n");
+                            actions.append("盖放怪兽-set\n");
                         }
                         if (LogicClient.mainGame.dField.ssetable_cards.size() != 0) {
-                            actions.append("盖放魔陷-setSpell\n");
+                            actions.append("盖放魔陷-set\n");
                         }
                         if (LogicClient.mainGame.dField.spsummonable_cards.size() != 0) {
                             actions.append("特殊召唤-spSummon\n");
                         }
                         if (LogicClient.mainGame.dField.activatable_cards.size() != 0) {
-                            actions.append("发动效果-activate\n");
+                            actions.append("发动效果-act\n");
                         }
                         log(actions.toString());
                     }
+                    case "queryList" -> {
+
+                    }
                     case "summon" -> {
-                        SelectOption ans = select(SelectOption.getOptions(logicClient.mainGame.dField.summonable_cards));
+                        SelectOption ans = select(SelectOption.getOptions(LogicClient.mainGame.dField.summonable_cards));
                         LogicClient.setResponseI(ans.value << 16);
                         try {
                             logicClient.sendResponse();
@@ -130,11 +143,11 @@ public class MyClient implements ClientInterface {
                         SelectOption ans = select(opts);
                         switch (ans.value) {
                             case 0 -> {
-                                SelectOption ansM = select(SelectOption.getOptions(logicClient.mainGame.dField.msetable_cards));
+                                SelectOption ansM = select(SelectOption.getOptions(LogicClient.mainGame.dField.msetable_cards));
                                 LogicClient.setResponseI((ansM.value << 16) + 3);
                             }
                             case 1 -> {
-                                SelectOption ansS = select(SelectOption.getOptions(logicClient.mainGame.dField.ssetable_cards));
+                                SelectOption ansS = select(SelectOption.getOptions(LogicClient.mainGame.dField.ssetable_cards));
                                 LogicClient.setResponseI((ansS.value << 16) + 4);
                             }
                         }
@@ -144,13 +157,60 @@ public class MyClient implements ClientInterface {
                             throw new RuntimeException(e);
                         }
                     }
-                    case "activate" -> {
-                        SelectOption ans = select(SelectOption.getOptions(logicClient.mainGame.dField.activatable_cards));
+                    case "act" -> {
+                        SelectOption ans = select(SelectOption.getOptions(LogicClient.mainGame.dField.activatable_cards));
                         LogicClient.setResponseI((ans.value << 16) + 5);
                         try {
                             logicClient.sendResponse();
                         } catch (IOException e) {
                             throw new RuntimeException(e);
+                        }
+                    }
+                    case "spSummon" -> {
+                        // TODO 抽取各list
+                        log(Convertor.getStringList(LogicClient.mainGame.dField.spsummonable_cards).toString());
+                        ArrayList<ClientCard> list = LogicClient.mainGame.dField.spsummonable_cards;
+                        ArrayList<SelectOption> options = new ArrayList<>();
+                        Map<Integer, Boolean> locationMap = new HashMap<>();
+                        ArrayList<SelectOption> handOptions = new ArrayList<>();
+                        ArrayList<SelectOption> exOptions = new ArrayList<>();
+                        for (int i=0;i<list.size() ;i++) {
+                            ClientCard card = list.get(i);
+                            if(card.location == Dictionary.locationMap.get(LOCATION.HAND).value){
+                                handOptions.add(new SelectOption(card.toString(),i));
+                            }
+                            if(card.location == Dictionary.locationMap.get(LOCATION.EXTRA).value){
+                                exOptions.add(new SelectOption(card.toString(),i));
+                            }
+                            if (locationMap.get(card.location)!=null) continue;
+                            for (LOCATION location : Dictionary.locationMap.keySet()) {
+                                EnumStruct enumStruct = Dictionary.locationMap.get(location);
+                                if (enumStruct.value == card.location) {
+                                    locationMap.put(card.location, true);
+                                    options.add(new SelectOption(enumStruct.desc, enumStruct.value));
+                                }
+                            }
+                        }
+                        SelectOption ans = select(options);
+                        switch (ans.value) {
+                            case LOCATION_HAND -> {
+                                SelectOption target = select(handOptions);
+                                LogicClient.setResponseI((target.value << 16) + 1);
+                                try {
+                                    logicClient.sendResponse();
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
+                            case LOCATION_EXTRA -> {
+                                SelectOption target = select(exOptions);
+                                LogicClient.setResponseI((target.value << 16) +1);
+                                try {
+                                    logicClient.sendResponse();
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+                            }
                         }
                     }
                 }
