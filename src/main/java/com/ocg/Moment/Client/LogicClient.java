@@ -43,6 +43,7 @@ public class LogicClient {
     static int response_len = 0;
     static byte[] response_buf = new byte[64];
     int select_hint = 0;
+    int select_unselect_hint = 0;
     int last_select_hint = 0;
 
     public LogicClient(String name, Class<ClientInterface> client, Class<NetworkBase> network) {
@@ -118,9 +119,19 @@ public class LogicClient {
         sendToServer(CTOS_JOIN_GAME, new CTOSJoinGame((short) 0x1360, 0, pass, this.name));
     }
 
-    public void updateDeck() throws IOException {
-        Deck deck = DeckReader.ReadYDK("D:\\game\\ygopro\\deck\\闪刀姬.ydk");
+    public void updateDeck(String deckName) throws IOException {
+        Deck deck = DeckReader.ReadYDK(String.format("D:\\game\\ygopro\\deck\\%s.ydk", deckName));
         sendToServer(CTOS_UPDATE_DECK, new CTOSDeck(deck.getMain_code(), deck.getExtra_code(), deck.getSide_code()));
+    }
+
+    public void updateDeck() throws IOException {
+        Deck deck = DeckReader.ReadYDK(String.format("D:\\game\\ygopro\\deck\\闪刀姬.ydk"));
+        sendToServer(CTOS_UPDATE_DECK, new CTOSDeck(deck.getMain_code(), deck.getExtra_code(), deck.getSide_code()));
+    }
+
+    public void ready(String deckName) throws IOException {
+        updateDeck(deckName);
+        sendToServer(CTOS_HS_READY);
     }
 
     public void ready() throws IOException {
@@ -142,7 +153,7 @@ public class LogicClient {
      * @throws IOException
      */
     public void toss() throws IOException {
-        byte[] result = new byte[]{(byte) ((int) Math.random() % 3 + 1)};
+        byte[] result = new byte[]{(byte) ((int) (Math.random()*100 % 3) + 1)};
         sendToServer(CTOS_HAND_RESULT, result);
     }
 
@@ -195,6 +206,11 @@ public class LogicClient {
                 mainGame.chain_when_avail = false;
 
             }
+            case STOC_DUEL_END -> {
+                mainGame.dInfo.isStarted = false;
+                mainGame.dInfo.isFinished = true;
+                mainGame.is_building = false;
+            }
             case STOC_TIME_LIMIT -> {
                 byte player = pktData.get();
                 short leftTime = pktData.getShort();
@@ -223,7 +239,7 @@ public class LogicClient {
         }
         clientMove.log("[LOG]-curMsg=" + curMsg);
         switch (curMsg) {
-            case MSG_RETRY ->{
+            case MSG_RETRY -> {
                 clientMove.log("Try again");
             }
             case MSG_HINT -> {
@@ -231,18 +247,18 @@ public class LogicClient {
                 int player = pktData.get();
                 int data = pktData.getInt();
                 switch (type) {
-                    case HINT_EVENT -> {
+                    case HINT_EVENT, HINT_MESSAGE -> {
                         clientMove.log(DataManager.getDesc(data));
-                    }
-                    case HINT_MESSAGE -> {
-                        clientMove.log("[MSG]:" + DataManager.getDesc(data));
                     }
                     case HINT_SELECTMSG -> {
                         select_hint = data;
                         last_select_hint = data;
                     }
                     case HINT_OPSELECTED -> {
-                        clientMove.log(DataManager.getSysString(1510) + DataManager.getDesc(data));
+                        clientMove.log(Convertor.stringFormatterC(
+                                DataManager.getSysString(1510),
+                                DataManager.getDesc(data))
+                        );
                     }
                     case HINT_EFFECT -> {
                         clientMove.log(DataManager.getCardDesc(data) + "的效果");
@@ -299,6 +315,63 @@ public class LogicClient {
                 int seq = pktData.get();
                 pktData.getInt();// 代替updateCard中+4
                 mainGame.dField.updateCard(player, loc, seq, Convertor.getRestBytes(pktData));
+            }
+            case MSG_SELECT_BATTLECMD -> {
+                pktData.get();
+                int code, desc, count, con, loc, seq;
+                ClientCard pCard;
+                mainGame.dField.activatable_cards.clear();
+                mainGame.dField.activatable_descs.clear();
+                mainGame.dField.conti_cards.clear();
+                count = pktData.get();
+                for (int i = 0; i < count; i++) {
+                    code = pktData.getInt();
+                    con = mainGame.LocalPlayer(pktData.get());
+                    loc = pktData.get();
+                    seq = pktData.get();
+                    desc = pktData.getInt();
+                    pCard = mainGame.dField.getCard(con, loc, seq);
+                    int flag = 0;
+                    if ((code & 0x80000000) != 0) {
+                        flag = EDESC_OPERATION;
+                        code &= 0x7fffffff;
+                    }
+                    mainGame.dField.activatable_cards.add(pCard);
+                    Map<Integer, Integer> map = new HashMap<>();
+                    map.put(desc, flag);
+                    mainGame.dField.activatable_descs.add(map);
+                    if (flag == EDESC_OPERATION) {
+                        pCard.chain_code = code;
+                        mainGame.dField.conti_cards.add(pCard);
+                        mainGame.dField.conti_act = true;
+                    } else {
+                        pCard.cmdFlag |= COMMAND_ACTIVATE;
+                        if (pCard.controller == 0) {
+                            if (pCard.location == LOCATION_GRAVE) mainGame.dField.grave_act = true;
+                            else if (pCard.location == LOCATION_REMOVED) mainGame.dField.remove_act = true;
+                            else if (pCard.location == LOCATION_EXTRA) mainGame.dField.extra_act = true;
+                        }
+                    }
+                }
+                mainGame.dField.attackable_cards.clear();
+                count = pktData.get();
+                for (int i = 0; i < count; i++) {
+                    pktData.getInt();
+                    con = mainGame.LocalPlayer(pktData.get());
+                    loc = pktData.get();
+                    seq = pktData.get();
+                    pktData.get();
+                    pCard = mainGame.dField.getCard(con, loc, seq);
+                    mainGame.dField.attackable_cards.add(pCard);
+                    pCard.cmdFlag |= COMMAND_ATTACK;
+                }
+                if (pktData.get() != 0) {
+                    mainGame.btnM2 = true;
+                }
+                if (pktData.get() != 0) {
+                    mainGame.btnEP = true;
+                }
+                clientMove.log("请选择操作");
             }
             case MSG_SELECT_IDLECMD -> {
                 pktData.get();
@@ -412,9 +485,11 @@ public class LogicClient {
                 }
                 if (pktData.get() != 0) {
                     // TODO 允许进入BP
+                    mainGame.btnBP = true;
                 }
                 if (pktData.get() != 0) {
                     // TODO 允许进入EP
+                    mainGame.btnEP = true;
                 }
                 if (pktData.get() != 0) {
                     // TODO 允许洗切手卡
@@ -422,6 +497,40 @@ public class LogicClient {
                 }
                 clientMove.log("请选择操作");
 
+            }
+            case MSG_SELECT_EFFECTYN -> {
+                pktData.get();
+                int code = pktData.getInt();
+                int c = mainGame.LocalPlayer(pktData.get());
+                int l = pktData.get();
+                int s = pktData.get();
+                ClientCard pCard = mainGame.dField.getCard(c, l, s);
+                if (pCard.code != code) pCard.setCode(code);
+                pktData.get();
+                if (l != LOCATION_DECK) {
+                    pCard.is_highlighting = true;
+                    mainGame.dField.highlighting_card = pCard;
+                }
+                int desc = pktData.getInt();
+                if (desc == 0) {
+                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(200), DataManager.formatLocation(l, s), DataManager.getCardDesc(code).name));
+                } else if (desc == 221) {
+                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(221), DataManager.formatLocation(l, s), DataManager.getCardDesc(code).name));
+                } else if (desc < 2048) {
+                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(desc), DataManager.getCardDesc(code).name));
+                } else {
+                    clientMove.log(Convertor.stringFormatterC(DataManager.getDesc(desc), DataManager.getCardDesc(code).name));
+                }
+                SelectOption ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {{
+                    add("否");
+                    add("是");
+                }}));
+                setResponseI(ans.value);
+                try {
+                    sendResponse();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
             case MSG_SELECT_YESNO -> {
                 pktData.get();
@@ -484,10 +593,13 @@ public class LogicClient {
                     });
                     SelectOption ans = clientMove.select(SelectOption.getOptions(arrayList));
                     mainGame.dField.selected_cards.add(mainGame.dField.selectable_cards.get(ans.value));
-                    if (mainGame.dField.selected_cards.size() >= mainGame.dField.select_min && mainGame.dField.select_min!=mainGame.dField.select_max) {
+                    if (mainGame.dField.selected_cards.size() >= mainGame.dField.select_min && mainGame.dField.select_min != mainGame.dField.select_max) {
                         clientMove.log("已满足最小选择，是否确定？");
-                        ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>(){{add("结束选择");add("继续");}}));
-                        if(ans.value ==0) break;
+                        ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {{
+                            add("结束选择");
+                            add("继续");
+                        }}));
+                        if (ans.value == 0) break;
                     }
                 }
                 mainGame.dField.setResponseSelectedCards();
@@ -656,8 +768,142 @@ public class LogicClient {
                 }
 
             }
-            case MSG_SELECT_UNSELECT_CARD ->{
+            case MSG_SELECT_SUM -> {
+                mainGame.dField.select_mode = pktData.get();
+                pktData.get();
+                mainGame.dField.select_sumval = pktData.getInt();
+                mainGame.dField.select_min = pktData.get();
+                mainGame.dField.select_max = pktData.get();
+                mainGame.dField.must_select_count = pktData.get();
+                mainGame.dField.selectsum_all.clear();
+                mainGame.dField.selected_cards.clear();
+                mainGame.dField.selectsum_cards.clear();
+                for (int i = 0; i < mainGame.dField.must_select_count; i++) {
+                    int code = pktData.getInt();
+                    int c = mainGame.LocalPlayer(pktData.get());
+                    int l = pktData.get();
+                    int s = pktData.get();
+                    ClientCard pCard = mainGame.dField.getCard(c, l, s);
+                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    pCard.opParam = pktData.getInt();
+                    pCard.select_seq = 0;
+                    mainGame.dField.selected_cards.add(pCard);
+                }
+                int count = pktData.get();
+                for (int i = 0; i < count; i++) {
+                    int code = pktData.getInt();
+                    int c = mainGame.LocalPlayer(pktData.get());
+                    int l = pktData.get();
+                    int s = pktData.get();
+                    ClientCard pCard = mainGame.dField.getCard(c, l, s);
+                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    pCard.opParam = pktData.getInt();
+                    pCard.select_seq = i;
+                    mainGame.dField.selectsum_all.add(pCard);
+                }
+                if (select_hint != 0)
+                    clientMove.log(String.format(
+                            "%s(%d)",
+                            DataManager.getDesc(select_hint),
+                            mainGame.dField.select_sumval
+                    ));
+                else clientMove.log(String.format(
+                        "%s(%d)",
+                        DataManager.getDesc(560),
+                        mainGame.dField.select_sumval
+                ));
+                select_hint = 0;
+                // handler
+                mainGame.dField.showSelectSum(this,clientMove);
 
+            }
+            case MSG_SELECT_UNSELECT_CARD -> {
+                pktData.get();
+                boolean finish_able = pktData.get() != 0;
+                boolean cancel_able = pktData.get() != 0;
+                mainGame.dField.select_cancelable = finish_able || cancel_able;
+                mainGame.dField.select_min = pktData.get();
+                mainGame.dField.select_max = pktData.get();
+                int count1 = pktData.get();
+                mainGame.dField.selectable_cards.clear();
+                mainGame.dField.selected_cards.clear();
+                int c, l, s, ss, code;
+                long[] hand_count = {mainGame.dField.hand[0].size(), mainGame.dField.hand[1].size()};
+                int[] select_count_in_hand = {0, 0};
+                mainGame.dField.select_ready = false;
+                ClientCard pCard;
+                for (int i = 0; i < count1; i++) {
+                    code = pktData.getInt();
+                    c = mainGame.LocalPlayer(pktData.get());
+                    l = pktData.get();
+                    s = pktData.get();
+                    ss = pktData.get();
+                    if ((l & LOCATION_OVERLAY) > 0) {
+                        pCard = mainGame.dField.getCard(c, l & 0x7f, s).overlayed.get(ss);
+                    } else {
+                        pCard = mainGame.dField.getCard(c, l, s);
+                    }
+                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    pCard.select_seq = i;
+                    mainGame.dField.selectable_cards.add(pCard);
+                    pCard.is_selectable = true;
+                    pCard.is_selected = false;
+                }
+                int count2 = pktData.get();
+                for (int i = count1; i < count1 + count2; i++) {
+                    code = pktData.getInt();
+                    c = mainGame.LocalPlayer(pktData.get());
+                    l = pktData.get();
+                    s = pktData.get();
+                    ss = pktData.get();
+                    if ((l & LOCATION_OVERLAY) > 0) {
+                        pCard = mainGame.dField.getCard(c, l & 0x7f, s).overlayed.get(ss);
+                    } else {
+                        pCard = mainGame.dField.getCard(c, l, s);
+                    }
+                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    pCard.select_seq = i;
+                    mainGame.dField.selectable_cards.add(pCard);
+                    pCard.is_selectable = true;
+                    pCard.is_selected = true;
+                }
+                if (select_hint != 0) {
+                    select_unselect_hint = select_hint;
+                }
+                if (select_unselect_hint != 0) {
+                    clientMove.log(String.format("%s(%d-%d)",
+                            DataManager.getDesc(select_unselect_hint),
+                            mainGame.dField.select_min,
+                            mainGame.dField.select_max
+                    ));
+                } else clientMove.log(String.format("%s(%d-%d)",
+                        DataManager.getDesc(560),
+                        mainGame.dField.select_min,
+                        mainGame.dField.select_max
+                ));
+                select_hint = 0;
+                ArrayList<SelectOption> opts = new ArrayList<>();
+                opts.add(new SelectOption("取消", 0));
+                for (int i = 0; i < mainGame.dField.selectable_cards.size(); i++) {
+                    pCard = mainGame.dField.selectable_cards.get(i);
+                    if (pCard.is_selected) opts.add(new SelectOption(pCard.toString() + "(已选择)", i + 1));
+                    else opts.add(new SelectOption(pCard.toString(), i + 1));
+                }
+                SelectOption ans = clientMove.select(opts);
+                // handleSelect
+                if (ans.value == 0) {
+                    setResponseI(-1);
+                } else {
+                    pCard = mainGame.dField.selectable_cards.get(ans.value - 1);
+                    pCard.is_selected = !pCard.is_selected;
+                    mainGame.dField.selected_cards.add(pCard);
+                    mainGame.dField.setResponseSelectedCards();
+                }
+                try {
+                    sendResponse();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
             case MSG_CONFIRM_DECKTOP -> {
                 int player = mainGame.LocalPlayer((int) pktData.get());
@@ -672,38 +918,38 @@ public class LogicClient {
                     pktData.get();
                     pktData.get();
                     pktData.get();
-                    pCard = deck.get(deck.size() - i-1);
+                    pCard = deck.get(deck.size() - i - 1);
                     if (code != 0) {
                         pCard.setCode(code);
                         clientMove.log(DataManager.getCardDesc(code).name);
                     }
                 }
             }
-            case MSG_CONFIRM_CARDS->{
+            case MSG_CONFIRM_CARDS -> {
                 pktData.get();
                 int count = pktData.get();
-                int code,c,l,s;
+                int code, c, l, s;
                 ArrayList<ClientCard> field_confirm;
                 ArrayList<ClientCard> panel_confirm;
                 ClientCard pCard;
-                clientMove.log(DataManager.getSysString(208)+count);
-                for(int i=0;i<count;i++){
+                clientMove.log(DataManager.getSysString(208) + count);
+                for (int i = 0; i < count; i++) {
                     code = pktData.getInt();
                     c = mainGame.LocalPlayer(pktData.get());
                     l = pktData.get();
                     s = pktData.get();
-                    pCard = mainGame.dField.getCard(c,l,s);
-                    if(code !=0){
+                    pCard = mainGame.dField.getCard(c, l, s);
+                    if (code != 0) {
                         pCard.setCode(code);
                     }
                     clientMove.log(DataManager.getCardDesc(code).name);
                 }
             }
-            case MSG_SHUFFLE_DECK->{
+            case MSG_SHUFFLE_DECK -> {
                 int player = pktData.get();
                 clientMove.log("洗切卡组");
             }
-            case MSG_SHUFFLE_HAND->{
+            case MSG_SHUFFLE_HAND -> {
                 int player = pktData.get();
                 int count = pktData.get();
                 clientMove.log("洗切手卡");
@@ -714,6 +960,9 @@ public class LogicClient {
             }
             case MSG_NEW_PHASE -> {
                 short phase = pktData.getShort();
+                mainGame.btnBP = false;
+                mainGame.btnM2 = false;
+                mainGame.btnEP = false;
                 switch (phase) {
                     case PHASE_DRAW -> {
                         clientMove.log("PHASE_DRAW");
@@ -929,6 +1178,158 @@ public class LogicClient {
                     mainGame.dField.addCard(pCard, player, LOCATION_HAND, 0);
                 }
             }
+            case MSG_DAMAGE -> {
+                int player = mainGame.LocalPlayer(pktData.get());
+                int val = pktData.getInt();
+                int finalLp = mainGame.dInfo.lp[player] - val;
+                if (finalLp < 0) finalLp = 0;
+                if (player == 0)
+                    clientMove.log(Convertor.stringFormatterC(
+                            DataManager.getSysString(1613),
+                            val
+                    ));
+                else
+                    clientMove.log(Convertor.stringFormatterC(
+                            DataManager.getSysString(1614),
+                            val
+                    ));
+                mainGame.dInfo.lp[player] = finalLp;
+                clientMove.log(String.format("LP = %d", mainGame.dInfo.lp[player]));
+            }
+            case MSG_RECOVER -> {
+                int player = mainGame.LocalPlayer(pktData.get());
+                int val = pktData.getInt();
+                int finalLp = mainGame.dInfo.lp[player] + val;
+                if (finalLp < 0) finalLp = 0;
+                if (player == 0)
+                    clientMove.log(Convertor.stringFormatterC(
+                            DataManager.getSysString(1615),
+                            val
+                    ));
+                else
+                    clientMove.log(Convertor.stringFormatterC(
+                            DataManager.getSysString(1616),
+                            val
+                    ));
+                mainGame.dInfo.lp[player] = finalLp;
+                clientMove.log(String.format("LP = %d", mainGame.dInfo.lp[player]));
+            }
+            case MSG_EQUIP -> {
+                int c1 = mainGame.LocalPlayer(pktData.get());
+                int l1 = pktData.get();
+                int s1 = pktData.get();
+                pktData.get();
+                int c2 = mainGame.LocalPlayer(pktData.get());
+                int l2 = pktData.get();
+                int s2 = pktData.get();
+                pktData.get();
+                ClientCard pC1 = mainGame.dField.getCard(c1, l1, s1);
+                ClientCard pC2 = mainGame.dField.getCard(c2, l2, s2);
+                if (pC1.equipTarget != null) {
+                    pC1.equipTarget.equipped.remove(pC1);
+                }
+                pC1.equipTarget = pC2;
+                pC2.equipped.add(pC1);
+                //
+                clientMove.log(String.format("%s装备了%s",
+                                DataManager.getCardDesc(pC2.code).name,
+                                DataManager.getCardDesc(pC1.code).name
+                        )
+                );
+            }
+            case MSG_LPUPDATE -> {
+                int player = mainGame.LocalPlayer(pktData.get());
+                int val = pktData.getInt();
+                mainGame.dInfo.lp[player] = val;
+                clientMove.log(String.format("LP = %d", mainGame.dInfo.lp[player]));
+            }
+            case MSG_UNEQUIP -> {
+                int c1 = mainGame.LocalPlayer(pktData.get());
+                int l1 = pktData.get();
+                int s1 = pktData.get();
+                pktData.get();
+                ClientCard pC1 = mainGame.dField.getCard(c1, l1, s1);
+                pC1.equipTarget.equipped.remove(pC1);
+                pC1.equipTarget = null;
+                clientMove.log(String.format("%s解除了装备了%s",
+                                DataManager.getCardDesc(pC1.equipTarget.code).name,
+                                DataManager.getCardDesc(pC1.code).name
+                        )
+                );
+            }
+            case MSG_CARD_TARGET -> {
+                int c1 = mainGame.LocalPlayer(pktData.get());
+                int l1 = pktData.get();
+                int s1 = pktData.get();
+                pktData.get();
+                int c2 = mainGame.LocalPlayer(pktData.get());
+                int l2 = pktData.get();
+                int s2 = pktData.get();
+                pktData.get();
+                ClientCard pC1 = mainGame.dField.getCard(c1, l1, s1);
+                ClientCard pC2 = mainGame.dField.getCard(c2, l2, s2);
+                pC1.cardTarget.add(pC2);
+                pC2.ownerTarget.add(pC1);
+            }
+            case MSG_CANCEL_TARGET -> {
+                int c1 = mainGame.LocalPlayer(pktData.get());
+                int l1 = pktData.get();
+                int s1 = pktData.get();
+                pktData.get();
+                int c2 = mainGame.LocalPlayer(pktData.get());
+                int l2 = pktData.get();
+                int s2 = pktData.get();
+                pktData.get();
+                ClientCard pC1 = mainGame.dField.getCard(c1, l1, s1);
+                ClientCard pC2 = mainGame.dField.getCard(c2, l2, s2);
+                pC1.cardTarget.remove(pC2);
+                pC2.ownerTarget.remove(pC1);
+            }
+            case MSG_PAY_LPCOST -> {
+                int player = mainGame.LocalPlayer(pktData.get());
+                int cost = pktData.getInt();
+                int finalLp = mainGame.dInfo.lp[player] - cost;
+                if (finalLp < 0) finalLp = 0;
+                mainGame.dInfo.lp[player] = finalLp;
+                clientMove.log(String.format("LP = %d", mainGame.dInfo.lp[player]));
+            }
+            case MSG_ATTACK -> {
+                int ca = mainGame.LocalPlayer(pktData.get());
+                int la = pktData.get();
+                int sa = pktData.get();
+                pktData.get();
+                mainGame.dField.attacker = mainGame.dField.getCard(ca, la, sa);
+                int cd = mainGame.LocalPlayer(pktData.get());
+                int ld = pktData.get();
+                int sd = pktData.get();
+            }
+            case MSG_BATTLE -> {
+                // TODO 描述类
+            }
+            case MSG_ATTACK_DISABLED -> {
+                clientMove.log(Convertor.stringFormatterC(
+                        DataManager.getSysString(1621),
+                        DataManager.getCardDesc(mainGame.dField.attacker.code).name
+                ));
+            }
+            case MSG_DAMAGE_STEP_START, MSG_DAMAGE_STEP_END -> {
+            }
+            case MSG_MISSED_EFFECT -> {
+                pktData.getInt();
+                int code = pktData.getInt();
+                clientMove.log(Convertor.stringFormatterC(
+                        DataManager.getSysString(1622),
+                        DataManager.getCardDesc(code).name
+                ));
+            }
+//            case MSG_RELOAD_FIELD ->{
+//                mainGame.dInfo.duel_rule = pktData.get();
+//                int val = 0;
+//                for(int i=0;i<val;i++){
+//                    int p = mainGame.LocalPlayer(i);
+//                    mainGame.dInfo.lp[p] = pktData.getInt();
+//                }
+//            }
         }
     }
 

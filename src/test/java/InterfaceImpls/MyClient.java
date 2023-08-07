@@ -34,6 +34,7 @@ public class MyClient implements ClientInterface {
 
     Scanner scanner;
     boolean signal = false;
+    boolean selecting = false;
     String currentInput = null;
 
     @Override
@@ -53,6 +54,7 @@ public class MyClient implements ClientInterface {
 
     @Override
     public SelectOption select(ArrayList<SelectOption> options) {
+        setIsSelecting(true);
         StringBuilder s = new StringBuilder("请选择：\n");
         for (int i = 0; i < options.size(); i++) {
             s.append((i) + "-" + options.get(i) + ";\n");
@@ -64,6 +66,7 @@ public class MyClient implements ClientInterface {
             String input = getInput();
             if (input != null && pattern.matcher(input).find()) {
                 setInput(null);
+                setIsSelecting(false);
                 return options.get(Integer.valueOf(input));
             }
         }
@@ -73,6 +76,15 @@ public class MyClient implements ClientInterface {
         this.currentInput = s;
     }
 
+    synchronized void setIsSelecting(boolean selecting) {
+        this.selecting = selecting;
+    }
+
+    synchronized boolean getIsSelecting() {
+        return this.selecting;
+    }
+
+
     synchronized String getInput() {
         return this.currentInput;
     }
@@ -81,15 +93,25 @@ public class MyClient implements ClientInterface {
         new Thread(new Runnable() {
             @Override
             public void run() {
+                boolean isSelecting = false;
+                if (getIsSelecting()) isSelecting = true;
                 switch (input) {
                     case "join" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
                         try {
-                            logicClient.join233("Moment");
+                            logicClient.join233("TM0#MOMENT");
                         } catch (IOException e) {
                             throw new RuntimeException(e);
                         }
                     }
                     case "ready" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
                         try {
                             logicClient.ready();
                         } catch (IOException e) {
@@ -97,7 +119,11 @@ public class MyClient implements ClientInterface {
                         }
                     }
                     // 查询可进行的操作
-                    case "queryAct" -> {
+                    case "queryAct" -> { //TODO 不展示当前阶段不允许的操作
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
                         StringBuilder actions = new StringBuilder("可进行的操作：\n");
                         if (LogicClient.mainGame.dField.summonable_cards.size() != 0) {
                             actions.append("通常召唤-summon\n");
@@ -114,12 +140,85 @@ public class MyClient implements ClientInterface {
                         if (LogicClient.mainGame.dField.activatable_cards.size() != 0) {
                             actions.append("发动效果-act\n");
                         }
+                        actions.append("阶段转换-go");
                         log(actions.toString());
                     }
-                    case "queryList" -> {
+                    case "go" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
+                        StringBuilder phase = new StringBuilder("请选择要进行的阶段：\n");
+                        ArrayList<SelectOption> opts = new ArrayList<>();
+                        if (LogicClient.mainGame.btnBP) {
+                            phase.append("进战阶-bp\n");
+                            opts.add(new SelectOption("bp", 0));
+                        }
+                        if (LogicClient.mainGame.btnM2) {
+                            phase.append("进入主要阶段2-M2\n");
+                            opts.add(new SelectOption("m2", 1));
+                        }
+                        if (LogicClient.mainGame.btnEP) {
+                            phase.append("进入结束阶段-ep\n");
+                            opts.add(new SelectOption("ep", 2));
+                        }
+                        log(phase.toString());
+                        SelectOption ans = select(opts);
+                        switch (ans.value) {
+                            case 0 -> {
+                                if (LogicClient.mainGame.dInfo.curMsg == MSG_SELECT_IDLECMD)
+                                    LogicClient.setResponseI(6);
+                            }
+                            case 1 -> {
+                                if (LogicClient.mainGame.dInfo.curMsg == MSG_SELECT_BATTLECMD)
+                                    LogicClient.setResponseI(2);
+                            }
+                            case 2 -> {
+                                if (LogicClient.mainGame.dInfo.curMsg == MSG_SELECT_BATTLECMD)
+                                    LogicClient.setResponseI(3);
+                                else if (LogicClient.mainGame.dInfo.curMsg == MSG_SELECT_IDLECMD)
+                                    LogicClient.setResponseI(7);
+                            }
+                        }
+                        try {
+                            logicClient.sendResponse();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
 
                     }
+                    case "queryList" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
+                        ArrayList<SelectOption> opts = new ArrayList<>();
+                        opts.add(new SelectOption("己方", 0));
+                        opts.add(new SelectOption("对方", 1));
+                        SelectOption player = select(opts);
+                        opts.clear();
+                        opts.add(new SelectOption("手卡", 0));
+                        opts.add(new SelectOption("怪兽区", 1));
+                        opts.add(new SelectOption("魔陷区", 2));
+                        opts.add(new SelectOption("墓地", 3));
+                        opts.add(new SelectOption("额外", 4));
+                        opts.add(new SelectOption("除外区", 5));
+                        SelectOption location = select(opts);
+                        switch (location.value) {
+                            case 0 -> log(LogicClient.mainGame.dField.hand[player.value].toString());
+                            case 1 -> log(LogicClient.mainGame.dField.mzone[player.value].toString());
+                            case 2 -> log(LogicClient.mainGame.dField.szone[player.value].toString());
+                            case 3 -> log(LogicClient.mainGame.dField.grave[player.value].toString());
+                            case 4 -> log(LogicClient.mainGame.dField.extra[player.value].toString());
+                            case 5 -> log(LogicClient.mainGame.dField.remove[player.value].toString());
+                            default -> log("无效输入");
+                        }
+                    }
                     case "summon" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
                         SelectOption ans = select(SelectOption.getOptions(LogicClient.mainGame.dField.summonable_cards));
                         LogicClient.setResponseI(ans.value << 16);
                         try {
@@ -128,7 +227,24 @@ public class MyClient implements ClientInterface {
                             throw new RuntimeException(e);
                         }
                     }
+                    case "atk" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
+                        SelectOption ans = select(SelectOption.getOptions(LogicClient.mainGame.dField.attackable_cards));
+                        LogicClient.setResponseI((ans.value << 16) + 1);
+                        try {
+                            logicClient.sendResponse();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
                     case "set" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
                         ArrayList<SelectOption> opts = new ArrayList();
                         if (LogicClient.mainGame.dField.msetable_cards.size() != 0) {
                             opts.add(new SelectOption("盖放怪兽", 0));
@@ -158,8 +274,17 @@ public class MyClient implements ClientInterface {
                         }
                     }
                     case "act" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
                         SelectOption ans = select(SelectOption.getOptions(LogicClient.mainGame.dField.activatable_cards));
-                        LogicClient.setResponseI((ans.value << 16) + 5);
+                        if (LogicClient.mainGame.dInfo.curMsg == MSG_SELECT_IDLECMD)
+                            LogicClient.setResponseI((ans.value << 16) + 5);
+                        else if (LogicClient.mainGame.dInfo.curMsg == MSG_SELECT_BATTLECMD)
+                            LogicClient.setResponseI(ans.value << 16);
+                        else
+                            LogicClient.setResponseI(ans.value);
                         try {
                             logicClient.sendResponse();
                         } catch (IOException e) {
@@ -167,6 +292,10 @@ public class MyClient implements ClientInterface {
                         }
                     }
                     case "spSummon" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
                         // TODO 抽取各list
                         log(Convertor.getStringList(LogicClient.mainGame.dField.spsummonable_cards).toString());
                         ArrayList<ClientCard> list = LogicClient.mainGame.dField.spsummonable_cards;
@@ -174,15 +303,15 @@ public class MyClient implements ClientInterface {
                         Map<Integer, Boolean> locationMap = new HashMap<>();
                         ArrayList<SelectOption> handOptions = new ArrayList<>();
                         ArrayList<SelectOption> exOptions = new ArrayList<>();
-                        for (int i=0;i<list.size() ;i++) {
+                        for (int i = 0; i < list.size(); i++) {
                             ClientCard card = list.get(i);
-                            if(card.location == Dictionary.locationMap.get(LOCATION.HAND).value){
-                                handOptions.add(new SelectOption(card.toString(),i));
+                            if (card.location == Dictionary.locationMap.get(LOCATION.HAND).value) {
+                                handOptions.add(new SelectOption(card.toString(), i));
                             }
-                            if(card.location == Dictionary.locationMap.get(LOCATION.EXTRA).value){
-                                exOptions.add(new SelectOption(card.toString(),i));
+                            if (card.location == Dictionary.locationMap.get(LOCATION.EXTRA).value) {
+                                exOptions.add(new SelectOption(card.toString(), i));
                             }
-                            if (locationMap.get(card.location)!=null) continue;
+                            if (locationMap.get(card.location) != null) continue;
                             for (LOCATION location : Dictionary.locationMap.keySet()) {
                                 EnumStruct enumStruct = Dictionary.locationMap.get(location);
                                 if (enumStruct.value == card.location) {
@@ -204,13 +333,24 @@ public class MyClient implements ClientInterface {
                             }
                             case LOCATION_EXTRA -> {
                                 SelectOption target = select(exOptions);
-                                LogicClient.setResponseI((target.value << 16) +1);
+                                LogicClient.setResponseI((target.value << 16) + 1);
                                 try {
                                     logicClient.sendResponse();
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
                             }
+                        }
+                    }
+                    case "rePos" -> {
+                        SelectOption ans = select(SelectOption.getOptions(
+                                LogicClient.mainGame.dField.reposable_cards
+                        ));
+                        LogicClient.setResponseI((ans.value << 16) + 2);
+                        try {
+                            logicClient.sendResponse();
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
                         }
                     }
                 }

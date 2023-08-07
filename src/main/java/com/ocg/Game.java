@@ -18,6 +18,11 @@ public class Game {
     public ClientField dField = new ClientField();
     public boolean gMutex; //使用信号量？
 
+    public boolean btnBP = false;
+    public boolean btnM2 = false;
+    public boolean btnEP = false;
+
+
 
     boolean Initialize() {
         return true;

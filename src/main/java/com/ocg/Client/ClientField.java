@@ -1,10 +1,13 @@
 package com.ocg.Client;
 
 import com.ocg.ChainInfo;
+import com.ocg.Moment.Client.ClientInterface;
 import com.ocg.Moment.Client.LogicClient;
+import com.ocg.Moment.Client.SelectOption;
 import com.ocg.dataController.DataManager;
 import com.ocg.utils.Convertor;
 
+import java.io.IOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -15,8 +18,10 @@ import static com.ocg.Constants.*;
 public class ClientField {
     public ArrayList<ClientCard>[] deck = new ArrayList[]{new ArrayList<>(), new ArrayList<>()};
     public ArrayList<ClientCard>[] hand = new ArrayList[]{new ArrayList<>(), new ArrayList<>()};
-    public ClientCard[][] mzone = {{null, null, null, null, null, null, null}, {null, null, null, null, null, null, null}};
-    public ClientCard[][] szone = {{null, null, null, null, null, null, null, null}, {null, null, null, null, null, null, null, null}};
+    //    public ClientCard[][] mzone = {{null, null, null, null, null, null, null}, {null, null, null, null, null, null, null}};
+//    public ClientCard[][] szone = {{null, null, null, null, null, null, null, null}, {null, null, null, null, null, null, null, null}};
+    public ArrayList<ClientCard>[] mzone = new ArrayList[]{new ArrayList<>(), new ArrayList<>()};
+    public ArrayList<ClientCard>[] szone = new ArrayList[]{new ArrayList<>(), new ArrayList<>()};
     public ArrayList<ClientCard>[] grave = new ArrayList[]{new ArrayList<>(), new ArrayList<>()};
     public ArrayList<ClientCard>[] remove = new ArrayList[]{new ArrayList<>(), new ArrayList<>()};
     public ArrayList<ClientCard>[] extra = new ArrayList[]{new ArrayList<>(), new ArrayList<>()};
@@ -46,7 +51,7 @@ public class ClientField {
     public int select_max;
     public int must_select_count;
     public int select_sumval;
-    public boolean select_mode;
+    public int select_mode;
     public boolean select_cancelable;
     public boolean select_panalmode;
     public boolean select_ready;
@@ -55,8 +60,8 @@ public class ClientField {
     public int select_counter_type;
     public ArrayList<ClientCard> selectable_cards = new ArrayList<>();
     public ArrayList<ClientCard> selected_cards = new ArrayList<>();
-    public Set<ClientCard> selectsum_cards  = new HashSet<>();
-    public ArrayList<ClientCard> selectsum_all  = new ArrayList<>();
+    public Set<ClientCard> selectsum_cards = new HashSet<>();
+    public ArrayList<ClientCard> selectsum_all = new ArrayList<>();
     public ArrayList<Integer> declare_opcodes = new ArrayList<>();
     public ArrayList<ClientCard> display_cards = new ArrayList<>();
     public ArrayList<Integer> sort_list = new ArrayList<>();
@@ -111,8 +116,10 @@ public class ClientField {
         conti_selecting = false;
         cant_check_grave = false;
         for (int p = 0; p < 2; ++p) {
-//            mzone[p].setSize(7);
-//            szone[p].setSize(8);
+            mzone[p] = new ArrayList<>();
+            szone[p] = new ArrayList<>();
+            for (int i = 0; i < 7; i++) mzone[p].add(null);
+            for (int i = 0; i < 8; i++) szone[p].add(null);
             deck[p] = new ArrayList<>();
             hand[p] = new ArrayList<>();
             extra[p] = new ArrayList<>();
@@ -151,34 +158,13 @@ public class ClientField {
         boolean is_xyz = (location & LOCATION_OVERLAY) != 0;
         location &= 0x7f;
         switch (location) {
-            case LOCATION_DECK -> {
-                list = deck[controller];
-                break;
-            }
-            case LOCATION_HAND -> {
-                list = hand[controller];
-                break;
-            }
-            case LOCATION_MZONE -> {
-                list = new ArrayList<>(Arrays.asList(mzone[controller]));
-                break;
-            }
-            case LOCATION_SZONE -> {
-                list = new ArrayList<>(Arrays.asList(szone[controller]));
-                break;
-            }
-            case LOCATION_GRAVE -> {
-                list = grave[controller];
-                break;
-            }
-            case LOCATION_REMOVED -> {
-                list = remove[controller];
-                break;
-            }
-            case LOCATION_EXTRA -> {
-                list = extra[controller];
-                break;
-            }
+            case LOCATION_DECK -> list = deck[controller];
+            case LOCATION_HAND -> list = hand[controller];
+            case LOCATION_MZONE -> list = mzone[controller];
+            case LOCATION_SZONE -> list = szone[controller];
+            case LOCATION_GRAVE -> list = grave[controller];
+            case LOCATION_REMOVED -> list = remove[controller];
+            case LOCATION_EXTRA -> list = extra[controller];
         }
         if (list == null) return null;
         if (is_xyz) {
@@ -202,11 +188,11 @@ public class ClientField {
                 break;
             }
             case LOCATION_MZONE -> {
-                list = new ArrayList<>(Arrays.asList(mzone[controller]));
+                list = mzone[controller];
                 break;
             }
             case LOCATION_SZONE -> {
-                list = new ArrayList<>(Arrays.asList(szone[controller]));
+                list = szone[controller];
                 break;
             }
             case LOCATION_GRAVE -> {
@@ -256,10 +242,10 @@ public class ClientField {
                 }
             }
             case LOCATION_MZONE -> {
-                mzone[controller][sequence] = null;
+                mzone[controller].set(sequence, null);
             }
             case LOCATION_SZONE -> {
-                szone[controller][sequence] = null;
+                szone[controller].set(sequence, null);
             }
             case LOCATION_GRAVE -> {
                 grave[controller].remove(sequence);
@@ -304,30 +290,24 @@ public class ClientField {
                     pcard.sequence = 0;
                 }
                 pcard.is_reversed = false;
-                break;
             }
             case LOCATION_HAND -> {
                 hand[controller].add(pcard);
                 pcard.sequence = hand[controller].size() - 1;
-                break;
             }
             case LOCATION_MZONE -> {
-                mzone[controller][sequence] = pcard;
-                break;
+                mzone[controller].set(sequence, pcard);
             }
             case LOCATION_SZONE -> {
-                szone[controller][sequence] = pcard;
-                break;
+                szone[controller].set(sequence, pcard);
             }
             case LOCATION_GRAVE -> {
                 grave[controller].add(pcard);
                 pcard.sequence = grave[controller].size() - 1;
-                break;
             }
             case LOCATION_REMOVED -> {
                 remove[controller].add(pcard);
                 pcard.sequence = remove[controller].size() - 1;
-                break;
             }
             case LOCATION_EXTRA -> {
                 if (extra_p_count[controller] == 0 || (pcard.position & POS_FACEUP) != 0) {
@@ -348,7 +328,6 @@ public class ClientField {
                 if ((pcard.position & POS_FACEUP) != 0) {
                     extra_p_count[controller]++;
                 }
-                break;
             }
         }
     }
@@ -357,8 +336,10 @@ public class ClientField {
         for (int i = 0; i < 2; i++) {
             deck[i].clear();
             hand[i].clear();
-            mzone[i]=new ClientCard[]{null,null,null,null,null,null,null};
-            szone[i]=new ClientCard[]{null,null,null,null,null,null,null,null};
+            mzone[i].clear();
+            szone[i].clear();
+            for (int q = 0; q < 7; q++) mzone[i].add(null);
+            for (int q = 0; q < 8; q++) szone[i].add(null);
             grave[i].clear();
             remove[i].clear();
             extra[i].clear();
@@ -475,10 +456,10 @@ public class ClientField {
                 list = hand[controller];
             }
             case LOCATION_MZONE -> {
-                list = new ArrayList<>(Arrays.asList(mzone[controller]));
+                list = mzone[controller];
             }
             case LOCATION_SZONE -> {
-                list = new ArrayList<>(Arrays.asList(szone[controller]));
+                list = szone[controller];
             }
             case LOCATION_GRAVE -> {
                 list = grave[controller];
@@ -512,15 +493,192 @@ public class ClientField {
             pCard.updateInfo(data);
         }
     }
-    public void setResponseSelectedCards(){
+
+    public void setResponseSelectedCards() {
         byte[] respBuf = new byte[64];
-        respBuf[0] = (byte)selected_cards.size();
-        for(int i=0;i< selected_cards.size();i++){
-            respBuf[i+1] = (byte)selected_cards.get(i).select_seq;
+        respBuf[0] = (byte) selected_cards.size();
+        for (int i = 0; i < selected_cards.size(); i++) {
+            respBuf[i + 1] = (byte) selected_cards.get(i).select_seq;
         }
-        LogicClient.setResponseB(respBuf,selected_cards.size()+1);
+        LogicClient.setResponseB(respBuf, selected_cards.size() + 1);
     }
 
+    public void showSelectSum(LogicClient logicClient, ClientInterface clientMove) {
+        ArrayList<SelectOption> opts = new ArrayList<>();
+        while ((checkSelectSum() && (selectsum_cards.size() == 0 || selectable_cards.size() == 0))) {
+            if (checkSelectSum()) {
+                select_ready = true;
+                opts.add(new SelectOption("结束选择", 0));
+            } else select_ready = false;
+            // select
+            for (int i = 0; i < selectable_cards.size(); i++) {
+                ClientCard card = selectable_cards.get(i);
+                if (card.is_selected) opts.add(new SelectOption(
+                        DataManager.getCardDesc(card.code).name + "(已选择)",
+                        i + 1
+                ));
+                else opts.add(new SelectOption(
+                        DataManager.getCardDesc(card.code).name,
+                        i + 1
+                ));
+            }
+            SelectOption ans = clientMove.select(opts);
+            if (ans.value == 0) break;
+            selected_cards.add(selectable_cards.get(ans.value));
+        }
+        // send
+        setResponseSelectedCards();
+        try {
+            logicClient.sendResponse();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
+    boolean checkSelectSum() {
+        Set<ClientCard> sel_able = new HashSet<>();
+        for (ClientCard card : selectsum_all) {
+            card.is_selectable = false;
+            card.is_selected = false;
+            sel_able.add(card);
+        }
+        for (int i = 0; i < selected_cards.size(); i++) {
+            ClientCard card = selectable_cards.get(i);
+            if (i < must_select_count)
+                card.is_selectable = false;
+            else
+                card.is_selectable = true;
+            card.is_selected = true;
+            sel_able.remove(card);
+        }
+        selectsum_cards.clear();
+        if (select_mode == 0) {
+            boolean ret = check_sel_sum_s(sel_able, 0, select_sumval);
+            selectable_cards.clear();
+            for (ClientCard card : selectsum_cards) {
+                card.is_selectable = true;
+                selectable_cards.add(card);
+            }
+            return ret;
+        } else {
+            int mm = -1, mx = -1, max = 0, sumc = 0;
+            boolean ret = false;
+            for (ClientCard card : selected_cards) {
+                int op1 = card.opParam & 0xffff;
+                int op2 = card.opParam >> 16;
+                int opMin = (op2 > 0 && op1 > op2) ? op2 : op1;
+                int opMax = (op2 > op1) ? op2 : op1;
+                if (mm == -1 || opMin < mm) mm = opMin;
+                if (mm == -1 || opMin < mx) mm = opMax;
+                sumc += opMin;
+                max += opMax;
+            }
+            if (select_sumval <= sumc) return true;
+            if (select_sumval <= max && (select_sumval > (max - mx))) ret = true;
+            Iterator<ClientCard> it = sel_able.iterator();
+            while (it.hasNext()) {
+                ClientCard card = it.next();
+                int op1 = card.opParam & 0xffff;
+                int op2 = card.opParam >> 16;
+                int m = op1;
+                int sums = sumc;
+                sums += m;
+                int ms = mm;
+                if (ms == -1 || m < ms) ms = m;
+                if (sums >= select_sumval) {
+                    if (sums - ms < select_sumval)
+                        selectsum_cards.add(card);
+                } else {
+                    sel_able.remove(card);
+                    Iterator<ClientCard> it1 = sel_able.iterator();
+                    if (check_min(it1, select_sumval - sums, select_sumval - sums + ms - 1))
+                        selectsum_cards.add(card);
+                }
+                if (op2 == 0) continue;
+                m = op2;
+                sums = sumc;
+                sums += m;
+                ms = mm;
+                if (ms == -1 || m < ms) ms = m;
+                if (sums >= select_sumval) {
+                    if (sums - ms < select_sumval)
+                        selectsum_cards.add(card);
+                } else {
+                    sel_able.remove(card);
+                    Iterator<ClientCard> it2 = sel_able.iterator();
+                    if (check_min(it2, select_sumval - sums, select_sumval - sums + ms - 1))
+                        selectsum_cards.add(card);
+                }
+            }
+            selected_cards.clear();
+            for (ClientCard card : selectsum_cards) {
+                card.is_selectable = true;
+                selectable_cards.add(card);
+            }
+            return ret;
+        }
+    }
 
+    boolean check_min(Iterator<ClientCard> it, int min, int max) {
+        if (!it.hasNext()) return false;
+        ClientCard card = it.next();
+        int op1 = card.opParam & 0xffff;
+        int op2 = card.opParam >> 16;
+        int m = (op2 > 0 && op1 > op2) ? op2 : op1;
+        if (m >= min && m < max) return true;
+        return (min > m && check_min(it, min - m, max - m)) ||
+                check_min(it, min, max);
+    }
+
+    boolean check_sel_sum_s(Set<ClientCard> left, int index, int acc) {
+        if (acc < 0) return false;
+        if (index == selected_cards.size()) {
+            if (acc == 0) {
+                int count = selected_cards.size() - must_select_count;
+                return count >= select_min && count <= select_max;
+            }
+            check_sel_sum_t(left, acc);
+            return false;
+        }
+        int l = selected_cards.get(index).opParam;
+        int l1 = l & 0xffff;
+        int l2 = l >> 16;
+        boolean res1 = false, res2 = false;
+        res1 = check_sel_sum_s(left, index + 1, acc - l1);
+        if (l2 > 0)
+            res2 = check_sel_sum_s(left, index + 1, acc - l2);
+        return res1 || res2;
+    }
+
+    void check_sel_sum_t(Set<ClientCard> left, int acc) {
+        int count = selected_cards.size() + 1 - must_select_count;
+        Iterator<ClientCard> it = left.iterator();
+        while (it.hasNext()) {
+            ClientCard card = it.next();
+            if (selectsum_cards.contains(card)) continue;
+            left.remove(card);
+            int l = card.opParam;
+            int l1 = l & 0xffff;
+            int l2 = l >> 16;
+            if (check_sum(left.iterator(), acc - l1, count) || (l2 > 0 && check_sum(left.iterator(), acc - l2, count))) {
+                selectsum_cards.add(card);
+            }
+        }
+    }
+
+    boolean check_sum(Iterator<ClientCard> it, int acc, int count) {
+        if (acc == 0) return count >= select_min && count <= select_max;
+        if (acc < 0 || !it.hasNext()) return false;
+        ClientCard card = it.next();
+        int l = card.opParam;
+        int l1 = l & 0xffff;
+        int l2 = l >> 16;
+        if ((l1 == acc || (l2 > 0 && l2 == acc)) && (count + 1 >= select_min) && (count + 1 <= select_max)) {
+            return true;
+        }
+        return (acc > l1)
+                && check_sum(it, acc - l1, count + 1)
+                || (l2 > 0 && acc > l2 && check_sum(it, acc - l2, count + 1))
+                || check_sum(it, acc, count);
+    }
 }
