@@ -219,6 +219,10 @@ public class MyClient implements ClientInterface {
                             log("请先完成当前操作！");
                             return;
                         }
+                        if(LogicClient.mainGame.dField.summonable_cards.size()==0) {
+                            log("当前没有可以召唤的怪兽");
+                            return;
+                        }
                         SelectOption ans = select(SelectOption.getOptions(LogicClient.mainGame.dField.summonable_cards));
                         LogicClient.setResponseI(ans.value << 16);
                         try {
@@ -232,6 +236,10 @@ public class MyClient implements ClientInterface {
                             log("请先完成当前操作！");
                             return;
                         }
+                        if(LogicClient.mainGame.dField.attackable_cards.size()==0) {
+                            log("当前没有可以攻击的怪兽");
+                            return;
+                        }
                         SelectOption ans = select(SelectOption.getOptions(LogicClient.mainGame.dField.attackable_cards));
                         LogicClient.setResponseI((ans.value << 16) + 1);
                         try {
@@ -243,6 +251,10 @@ public class MyClient implements ClientInterface {
                     case "set" -> {
                         if (isSelecting) {
                             log("请先完成当前操作！");
+                            return;
+                        }
+                        if(LogicClient.mainGame.dField.ssetable_cards.size()==0 && LogicClient.mainGame.dField.msetable_cards.size()==0 ) {
+                            log("当前没有可以放置的卡片");
                             return;
                         }
                         ArrayList<SelectOption> opts = new ArrayList();
@@ -278,6 +290,10 @@ public class MyClient implements ClientInterface {
                             log("请先完成当前操作！");
                             return;
                         }
+                        if(LogicClient.mainGame.dField.activatable_cards.size()==0) {
+                            log("当前没有可以发动的效果");
+                            return;
+                        }
                         SelectOption ans = select(SelectOption.getOptions(LogicClient.mainGame.dField.activatable_cards));
                         if (LogicClient.mainGame.dInfo.curMsg == MSG_SELECT_IDLECMD)
                             LogicClient.setResponseI((ans.value << 16) + 5);
@@ -294,6 +310,10 @@ public class MyClient implements ClientInterface {
                     case "spSummon" -> {
                         if (isSelecting) {
                             log("请先完成当前操作！");
+                            return;
+                        }
+                        if(LogicClient.mainGame.dField.spsummonable_cards.size()==0) {
+                            log("当前没有可以特殊召唤的怪兽");
                             return;
                         }
                         // TODO 抽取各list
@@ -343,6 +363,14 @@ public class MyClient implements ClientInterface {
                         }
                     }
                     case "rePos" -> {
+                        if (isSelecting) {
+                            log("请先完成当前操作！");
+                            return;
+                        }
+                        if(LogicClient.mainGame.dField.reposable_cards.size()==0) {
+                            log("当前没有可以修改状态的怪兽");
+                            return;
+                        }
                         SelectOption ans = select(SelectOption.getOptions(
                                 LogicClient.mainGame.dField.reposable_cards
                         ));

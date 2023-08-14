@@ -14,8 +14,8 @@ public class test {
         DataManager dm = new DataManager();
         Moment moment = new Moment(MyClient.class, MyNetwork.class);
         LogicClient client = moment.newClient("Eferinte");
-        client.join233("TM0#MOMENT");
-        client.ready();
+        client.join233("TM0,NS#MOMENT");
+        client.ready("相剑");
 //        MultiThread multiThread = new MultiThread();
 //        multiThread.startListener();
 //        multiThread.run();

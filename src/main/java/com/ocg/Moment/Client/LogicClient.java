@@ -11,6 +11,7 @@ import com.ocg.Moment.Network.proStructs.CTOSDeck;
 import com.ocg.Moment.Network.proStructs.CTOSJoinGame;
 import com.ocg.Moment.Network.proStructs.CTOSPlayerInfo;
 import com.ocg.Moment.Network.proStructs.Structs;
+import com.ocg.dataController.CardString;
 import com.ocg.dataController.DataManager;
 import com.ocg.dataController.DeckReader;
 import com.ocg.utils.BitException;
@@ -42,6 +43,7 @@ public class LogicClient {
     public static Game mainGame = new Game();
     static int response_len = 0;
     static byte[] response_buf = new byte[64];
+    byte[] event_string = new byte[256];
     int select_hint = 0;
     int select_unselect_hint = 0;
     int last_select_hint = 0;
@@ -153,7 +155,7 @@ public class LogicClient {
      * @throws IOException
      */
     public void toss() throws IOException {
-        byte[] result = new byte[]{(byte) ((int) (Math.random()*100 % 3) + 1)};
+        byte[] result = new byte[]{(byte) ((int) (Math.random() * 100 % 3) + 1)};
         sendToServer(CTOS_HAND_RESULT, result);
     }
 
@@ -231,7 +233,7 @@ public class LogicClient {
         ByteBuffer pktData = ByteBuffer.allocate(len).order(ByteOrder.LITTLE_ENDIAN);
         pktData.put(buffer);
         pktData.flip();
-        byte curMsg = pktData.get();
+        int curMsg = Convertor.byteToUInt8(pktData.get());
         mainGame.dInfo.curMsg = curMsg;
         if (curMsg != MSG_RETRY) {
             System.arraycopy(buffer, 0, network.lastSuccessfulMsg, 0, len);
@@ -548,6 +550,22 @@ public class LogicClient {
                     throw new RuntimeException(e);
                 }
             }
+            case MSG_SELECT_OPTION -> {
+                // 非原生处理
+                pktData.get();
+                int count = pktData.get();
+                ArrayList<SelectOption> opts = new ArrayList<>();
+                for (int i = 0; i < count; i++) {
+                    opts.add(new SelectOption(DataManager.getSysString(pktData.getInt()), i));
+                }
+                SelectOption ans = clientMove.select(opts);
+                setResponseI(ans.value);
+                try {
+                    sendResponse();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
             case MSG_SELECT_CARD -> {
                 pktData.get();// player
                 mainGame.dField.select_cancelable = pktData.get() != 0;
@@ -690,13 +708,29 @@ public class LogicClient {
                 try {
                     if (forced == 0) {
                         if (count == 0) {
-                            System.out.println("此时没有可以发动的效果");
+                            clientMove.log(String.format("%s\n%s",
+                                    DataManager.getSysString(201),
+                                    DataManager.getSysString(202)));
                             setResponseI(-1);
                             sendResponse();
                         } else if (select_trigger) {
-
+                            clientMove.log(String.format("%s\n%s",
+                                    DataManager.getSysString(222),
+                                    DataManager.getSysString(223)));
+                            ArrayList options = new ArrayList<SelectOption>(2);
+                            options.add(new SelectOption("连锁", 0));
+                            options.add(new SelectOption("不连锁", 1));
+                            SelectOption ans = clientMove.select(options);
+                            clientMove.log("选择了" + ans);
+                            if (ans.value == 1) setResponseI(-1);
+                            else {
+                                clientMove.log("请选择要发动的效果");
+                                ans = clientMove.select(SelectOption.getOptions(Convertor.getStringList(mainGame.dField.activatable_cards)));
+                                setResponseI(ans.value);
+                            }
+                            sendResponse();
                         } else {
-                            clientMove.log("是否要进行连锁");
+                            clientMove.log(DataManager.getSysString(203));
                             ArrayList options = new ArrayList<SelectOption>(2);
                             options.add(new SelectOption("连锁", 0));
                             options.add(new SelectOption("不连锁", 1));
@@ -768,6 +802,10 @@ public class LogicClient {
                 }
 
             }
+            case MSG_SELECT_TRIBUTE -> {
+            }
+            case MSG_SELECT_COUNTER -> {
+            }
             case MSG_SELECT_SUM -> {
                 mainGame.dField.select_mode = pktData.get();
                 pktData.get();
@@ -814,7 +852,7 @@ public class LogicClient {
                 ));
                 select_hint = 0;
                 // handler
-                mainGame.dField.showSelectSum(this,clientMove);
+                mainGame.dField.showSelectSum(this, clientMove);
 
             }
             case MSG_SELECT_UNSELECT_CARD -> {
@@ -1322,6 +1360,84 @@ public class LogicClient {
                         DataManager.getCardDesc(code).name
                 ));
             }
+            case MSG_ANNOUNCE_RACE -> {
+                pktData.get();
+                mainGame.dField.announce_count = pktData.get();
+                int available = pktData.getInt();
+                ArrayList<SelectOption> opts = new ArrayList<>();
+                for (int i = 0, filter = 0x1; i < RACE_COUNT; i++, filter <<= 1) {
+                    if ((filter & available) != 0) {
+                        opts.add(new SelectOption(DataManager.getSysString(1020 + i), i));
+                    }
+                }
+                int raceAns = 0;
+                while (mainGame.dField.announce_count > 0) {
+                    SelectOption ans = clientMove.select(opts);
+                    raceAns |= (0x1 << ans.value);
+                    mainGame.dField.announce_count--;
+                }
+                setResponseI(raceAns);
+                try {
+                    sendResponse();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            case MSG_ANNOUNCE_ATTRIB -> {
+                pktData.get();
+                mainGame.dField.announce_count = pktData.get();
+                int available = pktData.getInt();
+                ArrayList<SelectOption> opts = new ArrayList<>();
+                for (int i = 0, filter = 0x1; i < RACE_COUNT; i++, filter <<= 1) {
+                    if ((filter & available) != 0) {
+                        opts.add(new SelectOption(DataManager.getSysString(1010 + i), i));
+                    }
+                }
+                int raceAns = 0;
+                while (mainGame.dField.announce_count > 0) {
+                    SelectOption ans = clientMove.select(opts);
+                    raceAns |= (0x1 << ans.value);
+                    mainGame.dField.announce_count--;
+                }
+                setResponseI(raceAns);
+                try {
+                    sendResponse();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            case MSG_ANNOUNCE_CARD -> {
+                // not native
+                pktData.get();
+                int count = pktData.get();
+                mainGame.dField.declare_opcodes.clear();
+                ArrayList<SelectOption> opts = new ArrayList<>();
+                int code = 0;
+                CardString card;
+                for(int i=0;i<count;i++){
+                    code = pktData.getInt();
+                    card = DataManager.getCardDesc(code);
+                    if(card!=null){
+                        opts.add(new SelectOption(card.name,code));
+                    }
+                }
+                if(select_hint!=0)
+                    clientMove.log(DataManager.getDesc(select_hint));
+                else
+                    clientMove.log(DataManager.getDesc(564));
+                select_hint = 0;
+                SelectOption ans = clientMove.select(opts);
+                setResponseI(ans.value);
+                try {
+                    sendResponse();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+            }
+            case MSG_ANNOUNCE_NUMBER -> {
+                // TODO
+            }
 //            case MSG_RELOAD_FIELD ->{
 //                mainGame.dInfo.duel_rule = pktData.get();
 //                int val = 0;
@@ -1370,4 +1486,3 @@ public class LogicClient {
     }
 
 }
-// TODO NEXT 空域点01不响应

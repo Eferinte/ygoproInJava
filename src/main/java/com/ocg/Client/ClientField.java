@@ -505,25 +505,22 @@ public class ClientField {
 
     public void showSelectSum(LogicClient logicClient, ClientInterface clientMove) {
         ArrayList<SelectOption> opts = new ArrayList<>();
-        while ((checkSelectSum() && (selectsum_cards.size() == 0 || selectable_cards.size() == 0))) {
-            if (checkSelectSum()) {
-                select_ready = true;
-                opts.add(new SelectOption("结束选择", 0));
-            } else select_ready = false;
+        while (true) {
+            if (checkSelectSum()) break;
+            if ((selectsum_cards.size() == 0 || selectable_cards.size() == 0)) break;
             // select
             for (int i = 0; i < selectable_cards.size(); i++) {
                 ClientCard card = selectable_cards.get(i);
                 if (card.is_selected) opts.add(new SelectOption(
                         DataManager.getCardDesc(card.code).name + "(已选择)",
-                        i + 1
+                        i
                 ));
                 else opts.add(new SelectOption(
                         DataManager.getCardDesc(card.code).name,
-                        i + 1
+                        i
                 ));
             }
             SelectOption ans = clientMove.select(opts);
-            if (ans.value == 0) break;
             selected_cards.add(selectable_cards.get(ans.value));
         }
         // send
@@ -543,7 +540,7 @@ public class ClientField {
             sel_able.add(card);
         }
         for (int i = 0; i < selected_cards.size(); i++) {
-            ClientCard card = selectable_cards.get(i);
+            ClientCard card = selected_cards.get(i);
             if (i < must_select_count)
                 card.is_selectable = false;
             else
@@ -656,11 +653,12 @@ public class ClientField {
         while (it.hasNext()) {
             ClientCard card = it.next();
             if (selectsum_cards.contains(card)) continue;
-            left.remove(card);
+            Set<ClientCard> testList = new HashSet<>(left);
+            testList.remove(card);
             int l = card.opParam;
             int l1 = l & 0xffff;
             int l2 = l >> 16;
-            if (check_sum(left.iterator(), acc - l1, count) || (l2 > 0 && check_sum(left.iterator(), acc - l2, count))) {
+            if (check_sum(testList.iterator(), acc - l1, count) || (l2 > 0 && check_sum(left.iterator(), acc - l2, count))) {
                 selectsum_cards.add(card);
             }
         }

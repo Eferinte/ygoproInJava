@@ -448,4 +448,6 @@ public interface Constants {
     public static final int QUERY_RSCALE = 0x400000;
     public static final int QUERY_LINK = 0x800000;
 
+    public static final int RACE_COUNT = 26;
+
 }
