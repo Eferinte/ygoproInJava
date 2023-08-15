@@ -175,7 +175,7 @@ public class LogicClient {
                 toss();
             }
             case STOC_SELECT_TP -> {
-                SelectOption ans = clientMove.select(new ArrayList<SelectOption>(Arrays.asList(new SelectOption("先攻", 0), new SelectOption("后攻", 1))));
+                SelectOption ans = clientMove.select(new ArrayList<SelectOption>(Arrays.asList(new SelectOption("先攻", 1), new SelectOption("后攻", 0))));
                 sendToServer(CTOS_TP_RESULT, new byte[]{(byte) ans.value});
             }
             case STOC_HAND_RESULT -> {
@@ -239,7 +239,7 @@ public class LogicClient {
             System.arraycopy(buffer, 0, network.lastSuccessfulMsg, 0, len);
             network.lastSuccessfulMsgLen = len;
         }
-        clientMove.log("[LOG]-curMsg=" + curMsg);
+//        clientMove.log("[LOG]-curMsg=" + curMsg);
         switch (curMsg) {
             case MSG_RETRY -> {
                 clientMove.log("Try again");
@@ -803,6 +803,60 @@ public class LogicClient {
 
             }
             case MSG_SELECT_TRIBUTE -> {
+                pktData.get();
+                mainGame.dField.select_cancelable = pktData.get()!=0;
+                mainGame.dField.select_min = pktData.get();
+                mainGame.dField.select_max = pktData.get();
+                int count = pktData.get();
+                mainGame.dField.selectable_cards.clear();
+                mainGame.dField.selected_cards.clear();
+                mainGame.dField.selectsum_all.clear();
+                mainGame.dField.selectsum_cards.clear();
+                for (int i = 0; i < count; i++) {
+                    int code = pktData.getInt();
+                    int c = mainGame.LocalPlayer(pktData.get());
+                    int l = pktData.get();
+                    int s = pktData.get();
+                    int t = pktData.get();
+                    ClientCard pCard = mainGame.dField.getCard(c, l, s);
+                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    mainGame.dField.selectable_cards.add(pCard);
+                    mainGame.dField.selectsum_all.add(pCard);
+                    pCard.opParam = t << 16 | 1;
+                    pCard.select_seq = i;
+                    pCard.is_selectable = true;
+                }
+                if (select_hint != 0)
+                    clientMove.log(String.format(
+                            "%s(%d-%d)",
+                            DataManager.getDesc(select_hint),
+                            mainGame.dField.select_min,
+                            mainGame.dField.select_max
+                    ));
+                else clientMove.log(String.format(
+                        "%s(%d-%d)",
+                        DataManager.getDesc(531),
+                        mainGame.dField.select_min,
+                        mainGame.dField.select_max
+                ));
+                select_hint = 0;
+                // handler
+                while(!mainGame.dField.checkSelectTribute()){
+                    SelectOption ans = clientMove.select(SelectOption.getOptions(mainGame.dField.selectable_cards));
+                    ClientCard card = mainGame.dField.selectable_cards.get(ans.value);
+                    if(card.is_selected){
+                        mainGame.dField.selected_cards.remove(card);
+                    }else{
+                        mainGame.dField.selected_cards.add(card);
+                    }
+                    card.is_selected = !card.is_selected;
+                }
+                mainGame.dField.setResponseSelectedCards();
+                try {
+                    sendResponse();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
             case MSG_SELECT_COUNTER -> {
             }
@@ -854,6 +908,29 @@ public class LogicClient {
                 // handler
                 mainGame.dField.showSelectSum(this, clientMove);
 
+            }
+            case MSG_SORT_CARD -> {
+                pktData.get();
+                int count = pktData.get();
+                mainGame.dField.selectable_cards.clear();
+                mainGame.dField.selected_cards.clear();
+                mainGame.dField.sort_list.clear();
+                int c,l,s,code;
+                ClientCard pCard;
+                for(int i=0;i<count;i++){
+                    code = pktData.getInt();
+                    c = mainGame.LocalPlayer(pktData.get());
+                    l = pktData.get();
+                    s = pktData.get();
+                    pCard = mainGame.dField.getCard(c,l,s);
+                    if(code !=0 && pCard.code != code) pCard.setCode(code);
+                    mainGame.dField.selectable_cards.add(pCard);
+                    mainGame.dField.sort_list.add(0);
+                }
+                clientMove.log(DataManager.getSysString(205));
+                mainGame.dField.select_min=0;
+                mainGame.dField.select_max = count;
+                mainGame.dField.showSelectCard();
             }
             case MSG_SELECT_UNSELECT_CARD -> {
                 pktData.get();

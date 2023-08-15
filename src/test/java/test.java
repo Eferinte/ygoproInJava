@@ -15,7 +15,7 @@ public class test {
         Moment moment = new Moment(MyClient.class, MyNetwork.class);
         LogicClient client = moment.newClient("Eferinte");
         client.join233("TM0,NS#MOMENT");
-        client.ready("相剑");
+        client.ready("旅鸟");
 //        MultiThread multiThread = new MultiThread();
 //        multiThread.startListener();
 //        multiThread.run();

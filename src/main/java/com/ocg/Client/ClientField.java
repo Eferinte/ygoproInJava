@@ -521,7 +521,9 @@ public class ClientField {
                 ));
             }
             SelectOption ans = clientMove.select(opts);
-            selected_cards.add(selectable_cards.get(ans.value));
+            ClientCard card = selectable_cards.get(ans.value);
+            card.is_selected = true;
+            selected_cards.add(card);
         }
         // send
         setResponseSelectedCards();
@@ -678,5 +680,70 @@ public class ClientField {
                 && check_sum(it, acc - l1, count + 1)
                 || (l2 > 0 && acc > l2 && check_sum(it, acc - l2, count + 1))
                 || check_sum(it, acc, count);
+    }
+    public boolean checkSelectTribute(){
+        Set<ClientCard> selAble = new HashSet<>();
+        for(ClientCard card : selectsum_all){
+            card.is_selectable = false;
+            card.is_selected = false;
+            selAble.add(card);
+        }
+        for(ClientCard card: selected_cards){
+            card.is_selectable = true;
+            card.is_selected = true;
+            selAble.remove(card);
+        }
+        selectsum_cards.clear();
+        boolean ret = check_sel_sum_trib_s(selAble,0,0);
+        selectable_cards.clear();
+        for(ClientCard card : selectsum_cards){
+            card.is_selectable = true;
+            selectable_cards.add(card);
+        }
+        return ret;
+    }
+    boolean check_sel_sum_trib_s(Set<ClientCard> left, int index, int acc) {
+        if (acc > select_max) return false;
+        if (index == selected_cards.size()) {
+            check_sel_sum_trib_t(left,acc);
+            return acc >= select_min && acc <= select_max;
+        }
+        int l = selected_cards.get(index).opParam;
+        int l1 = l & 0xffff;
+        int l2 = l >> 16;
+        boolean res1 = false, res2 = false;
+        res1 = check_sel_sum_trib_s(left, index + 1, acc + l1);
+        if (l2 > 0)
+            res2 = check_sel_sum_trib_s(left, index + 1, acc + l2);
+        return res1 || res2;
+    }
+    void check_sel_sum_trib_t(Set<ClientCard> left,int acc){
+        for(ClientCard card: left){
+            if(selectsum_cards.contains(card)) continue;
+            Set<ClientCard> testList = new HashSet<>(left);
+            testList.remove(card);
+            int l = card.opParam;
+            int l1 = l & 0xffff;
+            int l2 = l >> 16;
+            if(check_sum_trib(testList.iterator(),acc + l1) ||
+                    (l2 > 0 && check_sum_trib(testList.iterator(),acc+l2))
+            ){
+                selectsum_cards.add(card);
+            }
+        }
+    }
+    boolean check_sum_trib(Iterator<ClientCard> index,int acc){
+        if(acc >= select_min && acc <= select_max) return true;
+        if(acc >= select_max || !index.hasNext()) return false;
+        ClientCard card = index.next();
+        int l = card.opParam;
+        int l1 = l & 0xffff;
+        int l2 = l >> 16;
+        if((acc + l1 >- select_min && acc + l1 <= select_max) || (acc + l2 >= select_min && acc +l2 <= select_max))
+            return true;
+        return check_sum_trib(index,acc + l1) || check_sum_trib(index,acc + l2) || check_sum_trib(index,acc);
+    }
+    public void showSelectCard(){
+        // TODO
     }
 }
