@@ -1,6 +1,5 @@
 package com.ocg.Moment.Client;
 
-
 import com.ocg.ChainInfo;
 import com.ocg.Client.ClientCard;
 import com.ocg.Client.Zone;
@@ -65,8 +64,8 @@ public class LogicClient {
     }
 
     /*
-        内部方法
-         */
+     * 内部方法
+     */
     private boolean sendToServer(byte proto, byte[] msg) throws IOException {
         byte[] results = new byte[msg.length + 3];
         short len = (short) (results.length - 2);
@@ -78,7 +77,7 @@ public class LogicClient {
     }
 
     private boolean sendToServer(byte proto) throws IOException {
-        byte[] results = new byte[]{0x01, 0x00, proto};
+        byte[] results = new byte[] { 0x01, 0x00, proto };
         return network.CTOS(results);
     }
 
@@ -155,7 +154,7 @@ public class LogicClient {
      * @throws IOException
      */
     public void toss() throws IOException {
-        byte[] result = new byte[]{(byte) ((int) (Math.random() * 100 % 3) + 1)};
+        byte[] result = new byte[] { (byte) ((int) (Math.random() * 100 % 3) + 1) };
         sendToServer(CTOS_HAND_RESULT, result);
     }
 
@@ -175,8 +174,9 @@ public class LogicClient {
                 toss();
             }
             case STOC_SELECT_TP -> {
-                SelectOption ans = clientMove.select(new ArrayList<SelectOption>(Arrays.asList(new SelectOption("先攻", 1), new SelectOption("后攻", 0))));
-                sendToServer(CTOS_TP_RESULT, new byte[]{(byte) ans.value});
+                SelectOption ans = clientMove.select(new ArrayList<SelectOption>(
+                        Arrays.asList(new SelectOption("先攻", 1), new SelectOption("后攻", 0))));
+                sendToServer(CTOS_TP_RESULT, new byte[] { (byte) ans.value });
             }
             case STOC_HAND_RESULT -> {
                 clientMove.log("猜拳结果");
@@ -217,15 +217,21 @@ public class LogicClient {
                 byte player = pktData.get();
                 short leftTime = pktData.getShort();
                 int lPlayer = mainGame.LocalPlayer(player);
-                if (lPlayer == 0) sendToServer(CTOS_TIME_CONFIRM);
+                if (lPlayer == 0)
+                    sendToServer(CTOS_TIME_CONFIRM);
                 mainGame.dInfo.time_player = lPlayer;
                 mainGame.dInfo.time_left[lPlayer] = leftTime;
-//                clientMove.log("player[" + lPlayer + "] left time =" + leftTime);
+                // clientMove.log("player[" + lPlayer + "] left time =" + leftTime);
             }
             case STOC_CHAT -> {
                 String receivedMessage = new String(buffer, 1, packetLen - 1, StandardCharsets.UTF_16LE);
                 clientMove.log("[Message]: " + receivedMessage);
             }
+        }
+        try {
+            clientMove.onS2C(pktType, this);
+        } catch (Exception e) {
+            System.out.println(e.toString());
         }
     }
 
@@ -239,7 +245,7 @@ public class LogicClient {
             System.arraycopy(buffer, 0, network.lastSuccessfulMsg, 0, len);
             network.lastSuccessfulMsgLen = len;
         }
-//        clientMove.log("[LOG]-curMsg=" + curMsg);
+        // clientMove.log("[LOG]-curMsg=" + curMsg);
         switch (curMsg) {
             case MSG_RETRY -> {
                 clientMove.log("Try again");
@@ -259,8 +265,7 @@ public class LogicClient {
                     case HINT_OPSELECTED -> {
                         clientMove.log(Convertor.stringFormatterC(
                                 DataManager.getSysString(1510),
-                                DataManager.getDesc(data))
-                        );
+                                DataManager.getDesc(data)));
                     }
                     case HINT_EFFECT -> {
                         clientMove.log(DataManager.getCardDesc(data) + "的效果");
@@ -278,7 +283,6 @@ public class LogicClient {
 
                     }
                     case HINT_CARD -> {
-
 
                     }
                     case HINT_ZONE -> {
@@ -349,9 +353,12 @@ public class LogicClient {
                     } else {
                         pCard.cmdFlag |= COMMAND_ACTIVATE;
                         if (pCard.controller == 0) {
-                            if (pCard.location == LOCATION_GRAVE) mainGame.dField.grave_act = true;
-                            else if (pCard.location == LOCATION_REMOVED) mainGame.dField.remove_act = true;
-                            else if (pCard.location == LOCATION_EXTRA) mainGame.dField.extra_act = true;
+                            if (pCard.location == LOCATION_GRAVE)
+                                mainGame.dField.grave_act = true;
+                            else if (pCard.location == LOCATION_REMOVED)
+                                mainGame.dField.remove_act = true;
+                            else if (pCard.location == LOCATION_EXTRA)
+                                mainGame.dField.extra_act = true;
                         }
                     }
                 }
@@ -411,7 +418,8 @@ public class LogicClient {
                         mainGame.dField.extra_act = true;
                     } else {
                         seq = mainGame.dInfo.duel_rule >= 4 ? 0 : 6;
-                        if (pCard.location == LOCATION_SZONE && pCard.sequence == seq && ((pCard.type & TYPE_PENDULUM) != 0) && pCard.equipTarget == null) {
+                        if (pCard.location == LOCATION_SZONE && pCard.sequence == seq
+                                && ((pCard.type & TYPE_PENDULUM) != 0) && pCard.equipTarget == null) {
                             mainGame.dField.pzone_act[pCard.controller] = true;
                         }
                     }
@@ -507,7 +515,8 @@ public class LogicClient {
                 int l = pktData.get();
                 int s = pktData.get();
                 ClientCard pCard = mainGame.dField.getCard(c, l, s);
-                if (pCard.code != code) pCard.setCode(code);
+                if (pCard.code != code)
+                    pCard.setCode(code);
                 pktData.get();
                 if (l != LOCATION_DECK) {
                     pCard.is_highlighting = true;
@@ -515,18 +524,24 @@ public class LogicClient {
                 }
                 int desc = pktData.getInt();
                 if (desc == 0) {
-                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(200), DataManager.formatLocation(l, s), DataManager.getCardDesc(code).name));
+                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(200),
+                            DataManager.formatLocation(l, s), DataManager.getCardDesc(code).name));
                 } else if (desc == 221) {
-                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(221), DataManager.formatLocation(l, s), DataManager.getCardDesc(code).name));
+                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(221),
+                            DataManager.formatLocation(l, s), DataManager.getCardDesc(code).name));
                 } else if (desc < 2048) {
-                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(desc), DataManager.getCardDesc(code).name));
+                    clientMove.log(Convertor.stringFormatterC(DataManager.getSysString(desc),
+                            DataManager.getCardDesc(code).name));
                 } else {
-                    clientMove.log(Convertor.stringFormatterC(DataManager.getDesc(desc), DataManager.getCardDesc(code).name));
+                    clientMove.log(
+                            Convertor.stringFormatterC(DataManager.getDesc(desc), DataManager.getCardDesc(code).name));
                 }
-                SelectOption ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {{
-                    add("否");
-                    add("是");
-                }}));
+                SelectOption ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {
+                    {
+                        add("否");
+                        add("是");
+                    }
+                }));
                 setResponseI(ans.value);
                 try {
                     sendResponse();
@@ -539,10 +554,12 @@ public class LogicClient {
                 int desc = pktData.getInt();
                 mainGame.dField.highlighting_card = null;
                 clientMove.log(DataManager.getDesc(desc));
-                SelectOption ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {{
-                    add("否");
-                    add("是");
-                }}));
+                SelectOption ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {
+                    {
+                        add("否");
+                        add("是");
+                    }
+                }));
                 setResponseI(ans.value);
                 try {
                     sendResponse();
@@ -575,8 +592,8 @@ public class LogicClient {
                 mainGame.dField.selectable_cards.clear();
                 mainGame.dField.selected_cards.clear();
                 int c, l, s, ss, code;
-                long[] hand_count = new long[]{mainGame.dField.hand[0].size(), mainGame.dField.hand[1].size()};
-                int[] select_count_in_hand = new int[]{0, 0};
+                long[] hand_count = new long[] { mainGame.dField.hand[0].size(), mainGame.dField.hand[1].size() };
+                int[] select_count_in_hand = new int[] { 0, 0 };
                 boolean select_ready = mainGame.dField.select_min == 0;
                 mainGame.dField.select_ready = select_ready;
                 ClientCard pCard;
@@ -588,8 +605,10 @@ public class LogicClient {
                     ss = pktData.get();
                     if ((l & LOCATION_OVERLAY) > 0) {
                         pCard = mainGame.dField.getCard(c, l & 0x7f, s).overlayed.get(ss);
-                    } else pCard = mainGame.dField.getCard(c, l, s);
-                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    } else
+                        pCard = mainGame.dField.getCard(c, l, s);
+                    if (code != 0 && pCard.code != code)
+                        pCard.setCode(code);
                     pCard.select_seq = i;
                     pCard.is_selectable = true;
                     pCard.is_selected = false;
@@ -598,26 +617,33 @@ public class LogicClient {
                 }
                 // TODO 排序
                 if (select_hint != 0)
-                    clientMove.log(String.format("%s(%d-%d)", DataManager.getDesc(select_hint), mainGame.dField.select_min, mainGame.dField.select_max));
+                    clientMove.log(String.format("%s(%d-%d)", DataManager.getDesc(select_hint),
+                            mainGame.dField.select_min, mainGame.dField.select_max));
                 else
-                    clientMove.log(String.format("%s(%d-%d)", DataManager.getData(560), mainGame.dField.select_min, mainGame.dField.select_max));
+                    clientMove.log(String.format("%s(%d-%d)", DataManager.getData(560), mainGame.dField.select_min,
+                            mainGame.dField.select_max));
                 select_hint = 0;
                 // 选择
                 // TODO 接口化到client中
                 while (mainGame.dField.selected_cards.size() < mainGame.dField.select_max) {
                     ArrayList<String> arrayList = Convertor.getStringList(mainGame.dField.selectable_cards, (cards) -> {
-                        if (cards.is_selected) return false;
+                        if (cards.is_selected)
+                            return false;
                         return true;
                     });
                     SelectOption ans = clientMove.select(SelectOption.getOptions(arrayList));
                     mainGame.dField.selected_cards.add(mainGame.dField.selectable_cards.get(ans.value));
-                    if (mainGame.dField.selected_cards.size() >= mainGame.dField.select_min && mainGame.dField.select_min != mainGame.dField.select_max) {
+                    if (mainGame.dField.selected_cards.size() >= mainGame.dField.select_min
+                            && mainGame.dField.select_min != mainGame.dField.select_max) {
                         clientMove.log("已满足最小选择，是否确定？");
-                        ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {{
-                            add("结束选择");
-                            add("继续");
-                        }}));
-                        if (ans.value == 0) break;
+                        ans = clientMove.select(SelectOption.getOptions(new ArrayList<String>() {
+                            {
+                                add("结束选择");
+                                add("继续");
+                            }
+                        }));
+                        if (ans.value == 0)
+                            break;
                     }
                 }
                 mainGame.dField.setResponseSelectedCards();
@@ -685,7 +711,9 @@ public class LogicClient {
                     }
                 }
                 clientMove.log("可发动的卡 =" + mainGame.dField.activatable_cards);
-                if (!select_trigger && (forced == 0) && (mainGame.ignore_chain || ((count == 0 || speCount == 0) && !mainGame.always_chain) && (count == 0 || !mainGame.chain_when_avail))) {
+                if (!select_trigger && (forced == 0)
+                        && (mainGame.ignore_chain || ((count == 0 || speCount == 0) && !mainGame.always_chain)
+                                && (count == 0 || !mainGame.chain_when_avail))) {
                     try {
                         setResponseI(-1);
                         mainGame.dField.clearChainSelect();
@@ -722,10 +750,12 @@ public class LogicClient {
                             options.add(new SelectOption("不连锁", 1));
                             SelectOption ans = clientMove.select(options);
                             clientMove.log("选择了" + ans);
-                            if (ans.value == 1) setResponseI(-1);
+                            if (ans.value == 1)
+                                setResponseI(-1);
                             else {
                                 clientMove.log("请选择要发动的效果");
-                                ans = clientMove.select(SelectOption.getOptions(Convertor.getStringList(mainGame.dField.activatable_cards)));
+                                ans = clientMove.select(SelectOption
+                                        .getOptions(Convertor.getStringList(mainGame.dField.activatable_cards)));
                                 setResponseI(ans.value);
                             }
                             sendResponse();
@@ -736,10 +766,12 @@ public class LogicClient {
                             options.add(new SelectOption("不连锁", 1));
                             SelectOption ans = clientMove.select(options);
                             clientMove.log("选择了" + ans);
-                            if (ans.value == 1) setResponseI(-1);
+                            if (ans.value == 1)
+                                setResponseI(-1);
                             else {
                                 clientMove.log("请选择要发动的效果");
-                                ans = clientMove.select(SelectOption.getOptions(Convertor.getStringList(mainGame.dField.activatable_cards)));
+                                ans = clientMove.select(SelectOption
+                                        .getOptions(Convertor.getStringList(mainGame.dField.activatable_cards)));
                                 setResponseI(ans.value);
                             }
                             sendResponse();
@@ -757,7 +789,8 @@ public class LogicClient {
                 mainGame.dField.select_cancelable = count == 0;
                 mainGame.dField.selectable_field = pktData.getInt();
                 if (selecting_player == mainGame.LocalPlayer(1))
-                    mainGame.dField.selectable_field = (mainGame.dField.selectable_field >> 16) | (mainGame.dField.selectable_field << 16);
+                    mainGame.dField.selectable_field = (mainGame.dField.selectable_field >> 16)
+                            | (mainGame.dField.selectable_field << 16);
                 mainGame.dField.selected_field = 0;
                 byte[] respBuf = new byte[64];
                 int pZone = 0;
@@ -781,15 +814,19 @@ public class LogicClient {
                 pktData.get();
                 int code = pktData.getInt();
                 int positions = pktData.get();
-                if (positions == POS_ATTACK || positions == POS_FACEDOWN_ATTACK || positions == POS_FACEUP_DEFENSE || positions == POS_FACEDOWN_DEFENSE) {
+                if (positions == POS_ATTACK || positions == POS_FACEDOWN_ATTACK || positions == POS_FACEUP_DEFENSE
+                        || positions == POS_FACEDOWN_DEFENSE) {
                     setResponseI(positions);
                     return;
                 }
                 try {
                     ArrayList opts = new ArrayList();
-                    if ((positions & POS_ATTACK) != 0) opts.add(new SelectOption("表侧攻击表示", 0));
-                    if ((positions & POS_FACEUP_DEFENSE) != 0) opts.add(new SelectOption("表侧守备表示", 1));
-                    if ((positions & POS_FACEDOWN_DEFENSE) != 0) opts.add(new SelectOption("里侧守备表示", 2));
+                    if ((positions & POS_ATTACK) != 0)
+                        opts.add(new SelectOption("表侧攻击表示", 0));
+                    if ((positions & POS_FACEUP_DEFENSE) != 0)
+                        opts.add(new SelectOption("表侧守备表示", 1));
+                    if ((positions & POS_FACEDOWN_DEFENSE) != 0)
+                        opts.add(new SelectOption("里侧守备表示", 2));
                     SelectOption ans = clientMove.select(opts);
                     switch (ans.value) {
                         case 0 -> setResponseI(POS_FACEUP_ATTACK);
@@ -804,7 +841,7 @@ public class LogicClient {
             }
             case MSG_SELECT_TRIBUTE -> {
                 pktData.get();
-                mainGame.dField.select_cancelable = pktData.get()!=0;
+                mainGame.dField.select_cancelable = pktData.get() != 0;
                 mainGame.dField.select_min = pktData.get();
                 mainGame.dField.select_max = pktData.get();
                 int count = pktData.get();
@@ -819,7 +856,8 @@ public class LogicClient {
                     int s = pktData.get();
                     int t = pktData.get();
                     ClientCard pCard = mainGame.dField.getCard(c, l, s);
-                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    if (code != 0 && pCard.code != code)
+                        pCard.setCode(code);
                     mainGame.dField.selectable_cards.add(pCard);
                     mainGame.dField.selectsum_all.add(pCard);
                     pCard.opParam = t << 16 | 1;
@@ -831,22 +869,21 @@ public class LogicClient {
                             "%s(%d-%d)",
                             DataManager.getDesc(select_hint),
                             mainGame.dField.select_min,
-                            mainGame.dField.select_max
-                    ));
-                else clientMove.log(String.format(
-                        "%s(%d-%d)",
-                        DataManager.getDesc(531),
-                        mainGame.dField.select_min,
-                        mainGame.dField.select_max
-                ));
+                            mainGame.dField.select_max));
+                else
+                    clientMove.log(String.format(
+                            "%s(%d-%d)",
+                            DataManager.getDesc(531),
+                            mainGame.dField.select_min,
+                            mainGame.dField.select_max));
                 select_hint = 0;
                 // handler
-                while(!mainGame.dField.checkSelectTribute()){
+                while (!mainGame.dField.checkSelectTribute()) {
                     SelectOption ans = clientMove.select(SelectOption.getOptions(mainGame.dField.selectable_cards));
                     ClientCard card = mainGame.dField.selectable_cards.get(ans.value);
-                    if(card.is_selected){
+                    if (card.is_selected) {
                         mainGame.dField.selected_cards.remove(card);
-                    }else{
+                    } else {
                         mainGame.dField.selected_cards.add(card);
                     }
                     card.is_selected = !card.is_selected;
@@ -876,7 +913,8 @@ public class LogicClient {
                     int l = pktData.get();
                     int s = pktData.get();
                     ClientCard pCard = mainGame.dField.getCard(c, l, s);
-                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    if (code != 0 && pCard.code != code)
+                        pCard.setCode(code);
                     pCard.opParam = pktData.getInt();
                     pCard.select_seq = 0;
                     mainGame.dField.selected_cards.add(pCard);
@@ -888,7 +926,8 @@ public class LogicClient {
                     int l = pktData.get();
                     int s = pktData.get();
                     ClientCard pCard = mainGame.dField.getCard(c, l, s);
-                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    if (code != 0 && pCard.code != code)
+                        pCard.setCode(code);
                     pCard.opParam = pktData.getInt();
                     pCard.select_seq = i;
                     mainGame.dField.selectsum_all.add(pCard);
@@ -897,13 +936,12 @@ public class LogicClient {
                     clientMove.log(String.format(
                             "%s(%d)",
                             DataManager.getDesc(select_hint),
-                            mainGame.dField.select_sumval
-                    ));
-                else clientMove.log(String.format(
-                        "%s(%d)",
-                        DataManager.getDesc(560),
-                        mainGame.dField.select_sumval
-                ));
+                            mainGame.dField.select_sumval));
+                else
+                    clientMove.log(String.format(
+                            "%s(%d)",
+                            DataManager.getDesc(560),
+                            mainGame.dField.select_sumval));
                 select_hint = 0;
                 // handler
                 mainGame.dField.showSelectSum(this, clientMove);
@@ -915,20 +953,21 @@ public class LogicClient {
                 mainGame.dField.selectable_cards.clear();
                 mainGame.dField.selected_cards.clear();
                 mainGame.dField.sort_list.clear();
-                int c,l,s,code;
+                int c, l, s, code;
                 ClientCard pCard;
-                for(int i=0;i<count;i++){
+                for (int i = 0; i < count; i++) {
                     code = pktData.getInt();
                     c = mainGame.LocalPlayer(pktData.get());
                     l = pktData.get();
                     s = pktData.get();
-                    pCard = mainGame.dField.getCard(c,l,s);
-                    if(code !=0 && pCard.code != code) pCard.setCode(code);
+                    pCard = mainGame.dField.getCard(c, l, s);
+                    if (code != 0 && pCard.code != code)
+                        pCard.setCode(code);
                     mainGame.dField.selectable_cards.add(pCard);
                     mainGame.dField.sort_list.add(0);
                 }
                 clientMove.log(DataManager.getSysString(205));
-                mainGame.dField.select_min=0;
+                mainGame.dField.select_min = 0;
                 mainGame.dField.select_max = count;
                 mainGame.dField.showSelectCard();
             }
@@ -943,8 +982,8 @@ public class LogicClient {
                 mainGame.dField.selectable_cards.clear();
                 mainGame.dField.selected_cards.clear();
                 int c, l, s, ss, code;
-                long[] hand_count = {mainGame.dField.hand[0].size(), mainGame.dField.hand[1].size()};
-                int[] select_count_in_hand = {0, 0};
+                long[] hand_count = { mainGame.dField.hand[0].size(), mainGame.dField.hand[1].size() };
+                int[] select_count_in_hand = { 0, 0 };
                 mainGame.dField.select_ready = false;
                 ClientCard pCard;
                 for (int i = 0; i < count1; i++) {
@@ -958,7 +997,8 @@ public class LogicClient {
                     } else {
                         pCard = mainGame.dField.getCard(c, l, s);
                     }
-                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    if (code != 0 && pCard.code != code)
+                        pCard.setCode(code);
                     pCard.select_seq = i;
                     mainGame.dField.selectable_cards.add(pCard);
                     pCard.is_selectable = true;
@@ -976,7 +1016,8 @@ public class LogicClient {
                     } else {
                         pCard = mainGame.dField.getCard(c, l, s);
                     }
-                    if (code != 0 && pCard.code != code) pCard.setCode(code);
+                    if (code != 0 && pCard.code != code)
+                        pCard.setCode(code);
                     pCard.select_seq = i;
                     mainGame.dField.selectable_cards.add(pCard);
                     pCard.is_selectable = true;
@@ -989,20 +1030,21 @@ public class LogicClient {
                     clientMove.log(String.format("%s(%d-%d)",
                             DataManager.getDesc(select_unselect_hint),
                             mainGame.dField.select_min,
-                            mainGame.dField.select_max
-                    ));
-                } else clientMove.log(String.format("%s(%d-%d)",
-                        DataManager.getDesc(560),
-                        mainGame.dField.select_min,
-                        mainGame.dField.select_max
-                ));
+                            mainGame.dField.select_max));
+                } else
+                    clientMove.log(String.format("%s(%d-%d)",
+                            DataManager.getDesc(560),
+                            mainGame.dField.select_min,
+                            mainGame.dField.select_max));
                 select_hint = 0;
                 ArrayList<SelectOption> opts = new ArrayList<>();
                 opts.add(new SelectOption("取消", 0));
                 for (int i = 0; i < mainGame.dField.selectable_cards.size(); i++) {
                     pCard = mainGame.dField.selectable_cards.get(i);
-                    if (pCard.is_selected) opts.add(new SelectOption(pCard.toString() + "(已选择)", i + 1));
-                    else opts.add(new SelectOption(pCard.toString(), i + 1));
+                    if (pCard.is_selected)
+                        opts.add(new SelectOption(pCard.toString() + "(已选择)", i + 1));
+                    else
+                        opts.add(new SelectOption(pCard.toString(), i + 1));
                 }
                 SelectOption ans = clientMove.select(opts);
                 // handleSelect
@@ -1115,9 +1157,7 @@ public class LogicClient {
                         String.format("%s从%s移动到%s",
                                 DataManager.getCardDesc(code),
                                 Dictionary.getLocationDesc(pl),
-                                Dictionary.getLocationDesc(cl)
-                        )
-                );
+                                Dictionary.getLocationDesc(cl)));
                 if (pl == 0) {
                     ClientCard pCard = new ClientCard();
                     pCard.position = cp;
@@ -1220,7 +1260,8 @@ public class LogicClient {
                 pktData.get();
                 ClientCard pcard = mainGame.dField.getCard(pcc, pcl, pcs, subs);
                 clientMove.log(Dictionary.getPlayerDesc(pcc) + "发动了" + pcard);
-                if (pcard.code != code) pcard.code = code;
+                if (pcard.code != code)
+                    pcard.code = code;
                 // TODO
                 pcard.is_highlighting = true;
                 if ((pcard.location & 0x30) != 0) {
@@ -1240,7 +1281,8 @@ public class LogicClient {
             }
             case MSG_CHAINED -> {
                 int ct = pktData.get();
-                clientMove.log(DataManager.getSysString(1609) + DataManager.getCardDesc(mainGame.dField.current_chain.code).toString());
+                clientMove.log(DataManager.getSysString(1609)
+                        + DataManager.getCardDesc(mainGame.dField.current_chain.code).toString());
                 mainGame.dField.chains.add(mainGame.dField.current_chain);
             }
             case MSG_CHAIN_SOLVING -> {
@@ -1297,17 +1339,16 @@ public class LogicClient {
                 int player = mainGame.LocalPlayer(pktData.get());
                 int val = pktData.getInt();
                 int finalLp = mainGame.dInfo.lp[player] - val;
-                if (finalLp < 0) finalLp = 0;
+                if (finalLp < 0)
+                    finalLp = 0;
                 if (player == 0)
                     clientMove.log(Convertor.stringFormatterC(
                             DataManager.getSysString(1613),
-                            val
-                    ));
+                            val));
                 else
                     clientMove.log(Convertor.stringFormatterC(
                             DataManager.getSysString(1614),
-                            val
-                    ));
+                            val));
                 mainGame.dInfo.lp[player] = finalLp;
                 clientMove.log(String.format("LP = %d", mainGame.dInfo.lp[player]));
             }
@@ -1315,17 +1356,16 @@ public class LogicClient {
                 int player = mainGame.LocalPlayer(pktData.get());
                 int val = pktData.getInt();
                 int finalLp = mainGame.dInfo.lp[player] + val;
-                if (finalLp < 0) finalLp = 0;
+                if (finalLp < 0)
+                    finalLp = 0;
                 if (player == 0)
                     clientMove.log(Convertor.stringFormatterC(
                             DataManager.getSysString(1615),
-                            val
-                    ));
+                            val));
                 else
                     clientMove.log(Convertor.stringFormatterC(
                             DataManager.getSysString(1616),
-                            val
-                    ));
+                            val));
                 mainGame.dInfo.lp[player] = finalLp;
                 clientMove.log(String.format("LP = %d", mainGame.dInfo.lp[player]));
             }
@@ -1347,10 +1387,8 @@ public class LogicClient {
                 pC2.equipped.add(pC1);
                 //
                 clientMove.log(String.format("%s装备了%s",
-                                DataManager.getCardDesc(pC2.code).name,
-                                DataManager.getCardDesc(pC1.code).name
-                        )
-                );
+                        DataManager.getCardDesc(pC2.code).name,
+                        DataManager.getCardDesc(pC1.code).name));
             }
             case MSG_LPUPDATE -> {
                 int player = mainGame.LocalPlayer(pktData.get());
@@ -1367,10 +1405,8 @@ public class LogicClient {
                 pC1.equipTarget.equipped.remove(pC1);
                 pC1.equipTarget = null;
                 clientMove.log(String.format("%s解除了装备了%s",
-                                DataManager.getCardDesc(pC1.equipTarget.code).name,
-                                DataManager.getCardDesc(pC1.code).name
-                        )
-                );
+                        DataManager.getCardDesc(pC1.equipTarget.code).name,
+                        DataManager.getCardDesc(pC1.code).name));
             }
             case MSG_CARD_TARGET -> {
                 int c1 = mainGame.LocalPlayer(pktData.get());
@@ -1404,7 +1440,8 @@ public class LogicClient {
                 int player = mainGame.LocalPlayer(pktData.get());
                 int cost = pktData.getInt();
                 int finalLp = mainGame.dInfo.lp[player] - cost;
-                if (finalLp < 0) finalLp = 0;
+                if (finalLp < 0)
+                    finalLp = 0;
                 mainGame.dInfo.lp[player] = finalLp;
                 clientMove.log(String.format("LP = %d", mainGame.dInfo.lp[player]));
             }
@@ -1424,8 +1461,7 @@ public class LogicClient {
             case MSG_ATTACK_DISABLED -> {
                 clientMove.log(Convertor.stringFormatterC(
                         DataManager.getSysString(1621),
-                        DataManager.getCardDesc(mainGame.dField.attacker.code).name
-                ));
+                        DataManager.getCardDesc(mainGame.dField.attacker.code).name));
             }
             case MSG_DAMAGE_STEP_START, MSG_DAMAGE_STEP_END -> {
             }
@@ -1434,8 +1470,7 @@ public class LogicClient {
                 int code = pktData.getInt();
                 clientMove.log(Convertor.stringFormatterC(
                         DataManager.getSysString(1622),
-                        DataManager.getCardDesc(code).name
-                ));
+                        DataManager.getCardDesc(code).name));
             }
             case MSG_ANNOUNCE_RACE -> {
                 pktData.get();
@@ -1491,14 +1526,14 @@ public class LogicClient {
                 ArrayList<SelectOption> opts = new ArrayList<>();
                 int code = 0;
                 CardString card;
-                for(int i=0;i<count;i++){
+                for (int i = 0; i < count; i++) {
                     code = pktData.getInt();
                     card = DataManager.getCardDesc(code);
-                    if(card!=null){
-                        opts.add(new SelectOption(card.name,code));
+                    if (card != null) {
+                        opts.add(new SelectOption(card.name, code));
                     }
                 }
-                if(select_hint!=0)
+                if (select_hint != 0)
                     clientMove.log(DataManager.getDesc(select_hint));
                 else
                     clientMove.log(DataManager.getDesc(564));
@@ -1515,14 +1550,20 @@ public class LogicClient {
             case MSG_ANNOUNCE_NUMBER -> {
                 // TODO
             }
-//            case MSG_RELOAD_FIELD ->{
-//                mainGame.dInfo.duel_rule = pktData.get();
-//                int val = 0;
-//                for(int i=0;i<val;i++){
-//                    int p = mainGame.LocalPlayer(i);
-//                    mainGame.dInfo.lp[p] = pktData.getInt();
-//                }
-//            }
+            // case MSG_RELOAD_FIELD ->{
+            // mainGame.dInfo.duel_rule = pktData.get();
+            // int val = 0;
+            // for(int i=0;i<val;i++){
+            // int p = mainGame.LocalPlayer(i);
+            // mainGame.dInfo.lp[p] = pktData.getInt();
+            // }
+            // }
+        }
+
+        try {
+            clientMove.onDuelMsg(curMsg, this);
+        } catch (Exception e) {
+            System.out.println(e.toString());
         }
     }
 
